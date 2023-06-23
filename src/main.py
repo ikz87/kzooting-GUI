@@ -1,7 +1,7 @@
 import kzserial
 import sys
 import serial
-from threading import Thread
+import threading
 from PyQt5.QtGui import *
 from PyQt5.QtWidgets import *
 from PyQt5.QtCore import Qt
@@ -59,6 +59,7 @@ class Visualizer(QWidget):
 class MainWindow(QMainWindow):
    def __init__(self):
       super(MainWindow, self).__init__()
+      self.is_open = True
 
       # Add a grid
       self.root_grid = QGridLayout()
@@ -81,16 +82,22 @@ class MainWindow(QMainWindow):
       self.ports = kzserial.get_serial_ports()
       self.rpp_port = self.ports[0]
       self.keys_info = {}
-      info_thread = Thread(target=self.update_keys_info, args=())
-      info_thread.start()
+      self.info_thread = threading.Thread(target=self.update_keys_info, args=())
+      self.info_thread.start()
 
       # Default selected key
       self.key_selected = "key_1"
 
 
    def update_keys_info(self):
+      """
+      Updates the keys info dict from a serial port
+      """
       self.rpp = serial.Serial(self.rpp_port, 9600)
       while True:
+         # Return from thread if window is closed
+         if not self.is_open:
+            return
          try:
             self.keys_info = kzserial.read_dict_from_port(self.rpp)
             key_distance = self.keys_info[self.key_selected]["distance"]
@@ -98,10 +105,17 @@ class MainWindow(QMainWindow):
             self.visualizer.visualizer_bar.setValue(round(key_distance*100))
          except (OSError, serial.SerialException):
             self.rpp.close()
+            #^ Should be handled differently
 
 
    def update_selected_key(self):
       self.key_selected = self.key_configs.ports_menu.currentText()
+
+
+   def closeEvent(self, a0: QCloseEvent):
+      self.is_open = False
+      self.info_thread.join()
+      return super().closeEvent(a0)
 
 
 def main():
