@@ -10,16 +10,20 @@ import collections
 import queue
 from PyQt5.QtGui import *
 from PyQt5.QtWidgets import *
-from PyQt5.QtCore import Qt
+from PyQt5.QtCore import Qt, pyqtSignal, QObject
 
 
-class State:
+class State(QObject):
     """
-    Impletentation of the observer to
-    control the aplication state
+    Implementation of the Observer Pattern to control application
+    state in a centralized manner. Callbacks are always executed
+    on the main thread of the application using Qt Signals.
     """
+    __update_signal = pyqtSignal(str, object)
     def __init__(self):
+        super(QObject, self).__init__()
         self.listeners = collections.defaultdict(list)
+        self.__update_signal.connect(lambda name, value: self.__execute_callbacks(name, value))
 
     def attach_listener(self, property_name, callback):
         self.listeners[property_name].append(callback)
@@ -27,10 +31,13 @@ class State:
     def setter(self, property_name):
         return lambda value: self.__setattr__(property_name, value)
 
-    def __setattr__(self, property_name, value):
-        self.__dict__[property_name] = value
+    def __execute_callbacks(self, property_name, value):
         for callback in self.listeners.get(property_name, []):
             callback(value)
+
+    def __setattr__(self, property_name, value):
+        self.__dict__[property_name] = value
+        self.__update_signal.emit(property_name, value)
 
 
 class Filler(QLabel):
