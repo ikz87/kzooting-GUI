@@ -23,7 +23,7 @@ class State(QObject):
     def __init__(self):
         super(QObject, self).__init__()
         self.listeners = collections.defaultdict(list)
-        self.__update_signal.connect(lambda property_name, value: self.__execute_callbacks(property_name, value))
+        self.__update_signal.connect(self.__execute_callbacks)
 
     def attach_listener(self, property_name, callback):
         self.listeners[property_name].append(callback)
