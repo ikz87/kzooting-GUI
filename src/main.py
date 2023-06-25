@@ -23,7 +23,7 @@ class State(QObject):
     def __init__(self):
         super(QObject, self).__init__()
         self.listeners = collections.defaultdict(list)
-        self.__update_signal.connect(lambda name, value: self.__execute_callbacks(name, value))
+        self.__update_signal.connect(lambda property_name, value: self.__execute_callbacks(property_name, value))
 
     def attach_listener(self, property_name, callback):
         self.listeners[property_name].append(callback)
@@ -120,7 +120,7 @@ class Visualizer(QWidget):
         bar.setInvertedAppearance(True)
         state.attach_listener(
             'key_distance',
-            lambda v: bar.setValue(round(v*100)))
+            lambda value: bar.setValue(round(value*100)))
 
         # Set up switch icon
         switch_icon = QPixmap("../assets/switch.png")
@@ -170,7 +170,7 @@ class MainWindow(QMainWindow):
             lambda port: self.update_selected_port(port))
 
         # Get keys information
-        self.info_thread = kthread.KThread(target=self.update_keys_info,
+        self.info_thread = kthread.KThread(target=self.update_pico_info,
                                            args=([self.rpp]))
 
     def watch_ports(self):
@@ -197,28 +197,30 @@ class MainWindow(QMainWindow):
             if self.rpp != None:
                 self.rpp.close()
             self.rpp = serial.Serial(port, timeout=0.5)
-            self.info_thread = kthread.KThread(target=self.update_keys_info,
+            self.info_thread = kthread.KThread(target=self.update_pico_info,
                                                args=([self.rpp]))
             self.info_thread.start()
         except (OSError, serial.SerialException):
             self.rpp = None
 
-    def update_keys_info(self, opened_port):
+    def update_pico_info(self, opened_port):
         """
         Updates the keys info dict from a serial port
         """
         while True:
             try:
-                keys_info = kzserial.read_dict_from_port(opened_port)
-                print(keys_info)
-                self.state.key_distance = keys_info[self.state.key_selected]["distance"]
+                pico_info = kzserial.read_dict_from_port(opened_port)
+                print(pico_info)
+                self.state.key_distance = pico_info[self.state.key_selected]["distance"]
 
             # Ignore json errors, they come from the pico 
             # sending some garbage through the serial port
             except json.decoder.JSONDecodeError:
                 pass
             # If anything else happens, return from the thread
-            except Exception:
+            except Exception as e:
+                print(e)
+
                 return
 
     def closeEvent(self, a0: QCloseEvent):
