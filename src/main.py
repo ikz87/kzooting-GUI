@@ -6,9 +6,26 @@ import threading
 import time
 import inotify.adapters
 import json
+import collections
 from PyQt5.QtGui import *
 from PyQt5.QtWidgets import *
 from PyQt5.QtCore import Qt
+
+
+class State:
+    def __init__(self):
+        self.listeners = collections.defaultdict(list)
+
+    def attach_listener(self, property_name, callback):
+        self.listeners[property_name].append(callback)
+
+    def setter(self, property_name):
+        return lambda value: self.__setattr__(property_name, value)
+
+    def __setattr__(self, property_name, value):
+        self.__dict__[property_name] = value
+        for callback in self.listeners.get(property_name, []):
+            callback(value)
 
 
 class Filler(QLabel):
@@ -45,49 +62,57 @@ class KeyConfigs(QWidget):
     """
     Top right qudrant of the window
     """
-    def __init__(self):
+    def __init__(self, state):
         super(KeyConfigs, self).__init__()
 
-        # Add grid
-        self.key_configs_grid = QGridLayout()
-        self.setLayout(self.key_configs_grid)
-
         # Set up dropdown menu for keys
-        self.keys_menu = QComboBox()
-        for i in range(9):
-            self.keys_menu.addItem(f"key_{i+1}")
+        keys_menu = QComboBox()
 
-            # Populate grid
-            self.key_configs_grid.addWidget(self.keys_menu, 0, 0)
+        keys_menu.currentIndexChanged.connect(
+            state.setter('key_selected')
+        )
+
+        for i in range(9):
+            keys_menu.addItem(f"key_{i+1}")
+
+        # Add grid
+        key_configs_grid = QGridLayout()
+        key_configs_grid.addWidget(keys_menu, 0, 0)
+
+        self.setLayout(key_configs_grid)
 
 
 class Visualizer(QWidget):
     """
     Bottom right quadrant of the window
     """
-    def __init__(self):
+    def __init__(self, state):
         super(Visualizer, self).__init__()
 
-        # Add grid
-        self.visualizer_grid = QGridLayout()
-        self.setLayout(self.visualizer_grid)
+        # Sets up the progress bar
+        bar = QProgressBar()
+        bar.setTextVisible(False)
+        bar.setOrientation(Qt.Vertical)
+        bar.setMaximum(400)
+        bar.setMinimum(0)
+        bar.setInvertedAppearance(True)
+        state.attach_listener(
+            'key_distance',
+            lambda v: bar.setValue(round(v*100))
+        )
+        
 
-        # Set up progress bar
-        self.visualizer_bar = QProgressBar()
-        self.visualizer_bar.setTextVisible(False)
-        self.visualizer_bar.setOrientation(Qt.Vertical)
-        self.visualizer_bar.setMaximum(400)
-        self.visualizer_bar.setMinimum(0)
-        self.visualizer_bar.setInvertedAppearance(True)
+        # Sets up switch icon
+        switch_icon = QPixmap("../assets/switch.png")
+        switch_label = QLabel()
+        switch_label.setPixmap(switch_icon)
 
-        # Set up switch icon
-        self.switch_icon = QPixmap("../assets/switch.png")
-        self.switch_label = QLabel()
-        self.switch_label.setPixmap(self.switch_icon)
+        # Populates grid
+        grid = QGridLayout()
+        grid.addWidget(bar, 0, 0)
+        grid.addWidget(switch_label, 0, 1)
 
-        # Populate grid
-        self.visualizer_grid.addWidget(self.visualizer_bar, 0, 0)
-        self.visualizer_grid.addWidget(self.switch_label, 0, 1)
+        self.setLayout(grid)
 
 
 class MainWindow(QMainWindow):
@@ -96,6 +121,8 @@ class MainWindow(QMainWindow):
     """
     def __init__(self):
         super(MainWindow, self).__init__()
+        state = State()
+        self.state = state
 
         # Add a grid
         self.root_grid = QGridLayout()
@@ -104,11 +131,12 @@ class MainWindow(QMainWindow):
         self.setCentralWidget(self.root_window)
 
         # Create widgets
-        self.key_configs = KeyConfigs()
-        self.key_configs.keys_menu.currentIndexChanged.connect(self.update_selected_key)
+        self.key_configs = KeyConfigs(state)
+        #self.key_configs.keys_menu.currentIndexChanged.connect(self.update_selected_key)
         self.general_configs = GeneralConfigs()
         self.general_configs.ports_menu.textActivated.connect(self.update_selected_port)
-        self.visualizer = Visualizer()
+        self.visualizer = Visualizer(state)
+        state.key_distance = 2.5
 
         # Populate grid
         self.root_grid.addWidget(self.general_configs, 0, 0)
@@ -188,8 +216,9 @@ class MainWindow(QMainWindow):
             try:
                 keys_info = kzserial.read_dict_from_port(opened_port)
                 print(keys_info)
-                key_distance = keys_info[self.key_selected]["distance"]
-                self.visualizer.visualizer_bar.setValue(round(key_distance*100))
+                key_distance = keys_info[self.state.key_selected]["distance"]
+                self.visualizer.bar.setValue(round(key_distance*100))
+
             # Ignore json errors, they come from the pico 
             # sending some garbage through the serial port
             except json.decoder.JSONDecodeError:
