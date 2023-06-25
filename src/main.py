@@ -14,6 +14,10 @@ from PyQt5.QtCore import Qt
 
 
 class State:
+    """
+    Impletentation of the observer to
+    control the aplication state
+    """
     def __init__(self):
         self.listeners = collections.defaultdict(list)
 
@@ -46,9 +50,7 @@ class GeneralConfigs(QWidget):
     def __init__(self, state):
         super(GeneralConfigs, self).__init__()
 
-
         # Set up dropdown menu for ports
-        # This will be updated from another thread
         ports_menu = QComboBox()
         ports_menu.setPlaceholderText("Select port")
         ports_menu.textActivated.connect(state.setter('selected_port'))
@@ -83,13 +85,12 @@ class KeyConfigs(QWidget):
         keys_menu = QComboBox()
 
         keys_menu.currentIndexChanged.connect(
-            lambda value: state.setter('key_selected')(f"key_{value + 1}")
-        )
+            lambda value: state.setter('key_selected')(f"key_{value + 1}"))
 
         for i in range(9):
             keys_menu.addItem(f"key_{i+1}")
 
-        # Add grid
+        # Populate grid
         key_configs_grid = QGridLayout()
         key_configs_grid.addWidget(keys_menu, 0, 0)
 
@@ -103,7 +104,7 @@ class Visualizer(QWidget):
     def __init__(self, state):
         super(Visualizer, self).__init__()
 
-        # Sets up the progress bar
+        # Set up the progress bar
         bar = QProgressBar()
         bar.setTextVisible(False)
         bar.setOrientation(Qt.Vertical)
@@ -112,16 +113,14 @@ class Visualizer(QWidget):
         bar.setInvertedAppearance(True)
         state.attach_listener(
             'key_distance',
-            lambda v: bar.setValue(round(v*100))
-        )
-        
+            lambda v: bar.setValue(round(v*100)))
 
-        # Sets up switch icon
+        # Set up switch icon
         switch_icon = QPixmap("../assets/switch.png")
         switch_label = QLabel()
         switch_label.setPixmap(switch_icon)
 
-        # Populates grid
+        # Populate grid
         grid = QGridLayout()
         grid.addWidget(bar, 0, 0)
         grid.addWidget(switch_label, 0, 1)
@@ -161,21 +160,16 @@ class MainWindow(QMainWindow):
 
         state.attach_listener(
             'selected_port',
-            lambda port: self.update_selected_port(port)
-        )
+            lambda port: self.update_selected_port(port))
 
         # Get keys information
         self.info_thread = kthread.KThread(target=self.update_keys_info,
                                            args=([self.rpp]))
 
-        # Set some defaults
-
-
     def watch_ports(self):
         """
         Watches for changes in /dev/tty and
-        updates ports if files for serial ports
-        are created or deleted
+        updates ports accordingly
         """
         self.state.available_ports = kzserial.get_serial_ports()
         watcher = inotify.adapters.Inotify()
@@ -185,7 +179,6 @@ class MainWindow(QMainWindow):
             if "ttyA" in filename:
                 if "IN_CLOSE_NOWRITE" in event_types or "IN_DELETE" in event_types:
                     self.state.available_ports = kzserial.get_serial_ports()
-
 
     def update_selected_port(self, port):
         """
@@ -198,11 +191,10 @@ class MainWindow(QMainWindow):
                 self.rpp.close()
             self.rpp = serial.Serial(port, timeout=0.5)
             self.info_thread = kthread.KThread(target=self.update_keys_info,
-                                                       args=([self.rpp]))
+                                               args=([self.rpp]))
             self.info_thread.start()
         except (OSError, serial.SerialException):
             self.rpp = None
-
 
     def update_keys_info(self, opened_port):
         """
@@ -222,7 +214,6 @@ class MainWindow(QMainWindow):
             except Exception:
                 return
 
-
     def closeEvent(self, a0: QCloseEvent):
         """
         Terminates threads and closes the main window
@@ -230,9 +221,11 @@ class MainWindow(QMainWindow):
         if self.info_thread.is_alive():
             self.info_thread.terminate()
             self.info_thread.join()
+
         if self.watch_thread.is_alive():
             self.watch_thread.terminate()
             self.watch_thread.join()
+
         return super().closeEvent(a0)
 
 
