@@ -7,6 +7,7 @@ import time
 import inotify.adapters
 import json
 import collections
+import queue
 from PyQt5.QtGui import *
 from PyQt5.QtWidgets import *
 from PyQt5.QtCore import Qt
@@ -42,25 +43,38 @@ class GeneralConfigs(QWidget):
     """
     Top left quadrant of the window
     """
-    def __init__(self):
+    def __init__(self, state):
         super(GeneralConfigs, self).__init__()
 
-        # Add grid
-        self.general_configs_grid = QGridLayout()
-        self.setLayout(self.general_configs_grid)
 
         # Set up dropdown menu for ports
         # This will be updated from another thread
-        self.ports_menu = QComboBox()
-        self.ports_menu.setPlaceholderText("Select port")
+        ports_menu = QComboBox()
+        ports_menu.setPlaceholderText("Select port")
+        ports_menu.textActivated.connect(state.setter('selected_port'))
+        self.was_empty = True
+
+        def update_ports(ports):
+            ports_menu.clear()
+            for port in ports:
+                ports_menu.addItem(port)
+            if self.was_empty and len(ports):
+                ports_menu.setCurrentText(ports[0])
+                state.selected_port = ports[0]
+            self.was_empty = False
+
+        state.attach_listener("available_ports", update_ports)
 
         # Populate grid
-        self.general_configs_grid.addWidget(self.ports_menu, 0, 0)
+        general_configs_grid = QGridLayout()
+        general_configs_grid.addWidget(ports_menu, 0, 0)
+
+        self.setLayout(general_configs_grid)
 
 
 class KeyConfigs(QWidget):
     """
-    Top right qudrant of the window
+    Top right quadrant of the window
     """
     def __init__(self, state):
         super(KeyConfigs, self).__init__()
@@ -69,7 +83,7 @@ class KeyConfigs(QWidget):
         keys_menu = QComboBox()
 
         keys_menu.currentIndexChanged.connect(
-            state.setter('key_selected')
+            lambda value: state.setter('key_selected')(f"key_{value + 1}")
         )
 
         for i in range(9):
@@ -131,30 +145,30 @@ class MainWindow(QMainWindow):
         self.setCentralWidget(self.root_window)
 
         # Create widgets
-        self.key_configs = KeyConfigs(state)
-        #self.key_configs.keys_menu.currentIndexChanged.connect(self.update_selected_key)
-        self.general_configs = GeneralConfigs()
-        self.general_configs.ports_menu.textActivated.connect(self.update_selected_port)
-        self.visualizer = Visualizer(state)
-        state.key_distance = 2.5
+        key_configs = KeyConfigs(state)
+        general_configs = GeneralConfigs(state)
+        visualizer = Visualizer(state)
 
         # Populate grid
-        self.root_grid.addWidget(self.general_configs, 0, 0)
-        self.root_grid.addWidget(self.key_configs, 0, 1)
-        self.root_grid.addWidget(self.visualizer, 1, 1)
+        self.root_grid.addWidget(general_configs, 0, 0)
+        self.root_grid.addWidget(key_configs, 0, 1)
+        self.root_grid.addWidget(visualizer, 1, 1)
 
         # Watch for changes in ports directory
         self.rpp = None
         self.watch_thread = kthread.KThread(target=self.watch_ports)
         self.watch_thread.start()
 
+        state.attach_listener(
+            'selected_port',
+            lambda port: self.update_selected_port(port)
+        )
+
         # Get keys information
         self.info_thread = kthread.KThread(target=self.update_keys_info,
                                            args=([self.rpp]))
 
         # Set some defaults
-        self.key_selected = "key_1"
-        self.update_ports()
 
 
     def watch_ports(self):
@@ -163,47 +177,29 @@ class MainWindow(QMainWindow):
         updates ports if files for serial ports
         are created or deleted
         """
+        self.state.available_ports = kzserial.get_serial_ports()
         watcher = inotify.adapters.Inotify()
         watcher.add_watch("/dev/")
         for event in watcher.event_gen(yield_nones=False):
             (_, event_types, path, filename) = event
             if "ttyA" in filename:
                 if "IN_CLOSE_NOWRITE" in event_types or "IN_DELETE" in event_types:
-                    self.update_ports()
+                    self.state.available_ports = kzserial.get_serial_ports()
 
 
-    def update_ports(self):
-        """
-        Updates the port list
-        """
-        ports = kzserial.get_serial_ports()
-        menu = self.general_configs.ports_menu
-        menu.clear()
-        if len(ports) > 0:
-            menu.addItems(ports)
-            if menu.currentIndex() == -1:
-                # If list was previously empty
-                # select first port automatically
-                menu.setCurrentText(ports[0])
-        else:
-            menu.setCurrentIndex(-1)
-        self.update_selected_port()
-
-
-    def update_selected_port(self):
+    def update_selected_port(self, port):
         """
         Updates selected port from dropdown menu
         """
-        last_port = self.rpp
-        self.port_selected = self.general_configs.ports_menu.currentText()
         try:
-            self.rpp = serial.Serial(self.port_selected, timeout=0.5)
-            if self.rpp != last_port:
-                if self.info_thread.is_alive():
-                    self.info_thread.terminate()
-                self.info_thread = kthread.KThread(target=self.update_keys_info,
+            if self.info_thread.is_alive():
+                self.info_thread.terminate()
+            if self.rpp != None:
+                self.rpp.close()
+            self.rpp = serial.Serial(port, timeout=0.5)
+            self.info_thread = kthread.KThread(target=self.update_keys_info,
                                                        args=([self.rpp]))
-                self.info_thread.start()
+            self.info_thread.start()
         except (OSError, serial.SerialException):
             self.rpp = None
 
@@ -216,8 +212,7 @@ class MainWindow(QMainWindow):
             try:
                 keys_info = kzserial.read_dict_from_port(opened_port)
                 print(keys_info)
-                key_distance = keys_info[self.state.key_selected]["distance"]
-                self.visualizer.bar.setValue(round(key_distance*100))
+                self.state.key_distance = keys_info[self.state.key_selected]["distance"]
 
             # Ignore json errors, they come from the pico 
             # sending some garbage through the serial port
@@ -226,13 +221,6 @@ class MainWindow(QMainWindow):
             # If anything else happens, return from the thread
             except Exception:
                 return
-
-
-    def update_selected_key(self):
-        """
-        Updates selected key from dropdown menu
-        """
-        self.key_selected = self.key_configs.keys_menu.currentText()
 
 
     def closeEvent(self, a0: QCloseEvent):
