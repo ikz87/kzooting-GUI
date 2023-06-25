@@ -70,7 +70,9 @@ class GeneralConfigs(QWidget):
             if self.was_empty and len(ports):
                 ports_menu.setCurrentText(ports[0])
                 state.selected_port = ports[0]
-            self.was_empty = False
+                self.was_empty = False
+            else:
+                self.was_empty = True
 
         state.attach_listener("available_ports", update_ports)
 
