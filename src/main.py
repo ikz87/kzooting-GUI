@@ -69,7 +69,7 @@ class KeyConfigs(QWidget):
         keys_menu = QComboBox()
 
         keys_menu.currentIndexChanged.connect(
-            state.setter('key_selected')
+            lambda value: state.setter('key_selected')(f"key_{value + 1}")
         )
 
         for i in range(9):
