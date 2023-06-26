@@ -93,7 +93,6 @@ class Info:
     key_9: KeyState
 
 
-
 def get_response_from_request(port, request):
     """
     Sends a request to the pico and waits until
