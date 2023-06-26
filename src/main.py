@@ -205,14 +205,14 @@ class MainWindow(QMainWindow):
         except (OSError, serial.SerialException):
             self.rpp = None
 
-    def update_pico_info(self, opened_port):
+    def update_pico_info(self, open_port):
         """
         Updates the keys info dict from a serial port
         """
         while True:
             try:
-                pico_info = kzserial.read_dict_from_port(opened_port)
-                print(pico_info)
+                pico_info = kzserial.read_dict_from_port(open_port)
+                #print(pico_info)
                 self.state.key_distance = pico_info[self.state.key_selected]["distance"]
 
             # Ignore json errors, they come from the pico 
