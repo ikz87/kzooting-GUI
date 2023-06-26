@@ -121,8 +121,8 @@ class Visualizer(QWidget):
         bar.setMinimum(0)
         bar.setInvertedAppearance(True)
         state.attach_listener(
-            'key_distance',
-            lambda value: bar.setValue(round(value*100)))
+            'info',
+            lambda info: bar.setValue(round(info.key_distance * 100)))
 
         # Set up switch icon
         switch_icon = QPixmap("../assets/switch.png")
@@ -215,7 +215,7 @@ class MainWindow(QMainWindow):
         """
         while True:
             try:
-                self.serial_queue.put(("info_request", self.state.info, port), block=True)
+                self.serial_queue.put(("info_request", self.state.setter('info'), port), block=True)
                 #pico_info = kzserial.get_response_from_request(port, "info_request")
                 #self.state.key_distance = pico_info.__dict__[self.state.key_selected].distance
             # If anything goes wrong, return from the thread
@@ -225,8 +225,9 @@ class MainWindow(QMainWindow):
 
     def run_serial_queue(self):
         while True:
-            (request, target, port) = self.queue.get(block=True)
+            (request, callback, port) = self.queue.get(block=True)
             response = kzserial.get_response_from_request(port, request)
+            callback(response)
             print(response)
             # Some code to update the target goes here
 
