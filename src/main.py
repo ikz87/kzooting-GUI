@@ -22,22 +22,41 @@ class State(QObject):
     __update_signal = pyqtSignal(str, object)
     def __init__(self):
         super(QObject, self).__init__()
-        self.listeners = collections.defaultdict(list)
+        self.__dict__['listeners'] = collections.defaultdict(list)
+        self.__dict__['lock'] = threading.RLock()
+
         self.__update_signal.connect(self.__execute_callbacks)
 
     def attach_listener(self, property_name, callback):
-        self.listeners[property_name].append(callback)
+        with self.lock:
+            self.listeners[property_name].append(callback)
 
     def setter(self, property_name):
-        return lambda value: self.__setattr__(property_name, value)
+        def __setter(value):
+            with self:
+                return self.__setattr__(property_name, value)
+        return __setter
+
+    def __enter__(self):
+        self.lock.acquire()
+        return self
+
+    def __exit__(self, type, value, traceback):
+        self.lock.release()
 
     def __execute_callbacks(self, property_name, value):
         for callback in self.listeners.get(property_name, []):
             callback(value)
 
+    def __getattr__(self, property_name):
+        with self.lock:
+            return self.__dict__[property_name]
+
     def __setattr__(self, property_name, value):
-        self.__dict__[property_name] = value
-        self.__update_signal.emit(property_name, value)
+        with self.lock:
+            self.__dict__[property_name] = value
+            self.__update_signal.emit(property_name, value)
+
 
 
 class Filler(QLabel):
