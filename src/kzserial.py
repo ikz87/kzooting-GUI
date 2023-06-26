@@ -6,6 +6,7 @@ import json
 from dataclasses import dataclass, is_dataclass, field, asdict
 from dacite import from_dict
 
+
 def get_serial_ports():
     """
     Returns a list of all serial  ports
@@ -32,15 +33,13 @@ def get_serial_ports():
 
     return result
 
+
 def read_dict_from_port(port):
     """
     Reads a dictionary from the port provided
     """
     line = port.readline().decode()
     return json.loads(line)
-
-    return message
-
 
 
 @dataclass
