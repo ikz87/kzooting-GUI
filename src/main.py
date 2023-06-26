@@ -212,7 +212,7 @@ class MainWindow(QMainWindow):
         while True:
             try:
                 pico_info = kzserial.get_response_from_request(port, "info_request")
-                self.state.key_distance = pico_info[self.state.key_selected]["distance"]
+                self.state.key_distance = pico_info.__dict__[self.state.key_selected].distance
 
             # Ignore json errors, they come from the pico 
             # sending some garbage through the serial port
@@ -221,7 +221,6 @@ class MainWindow(QMainWindow):
             # If anything else happens, return from the thread
             except Exception as e:
                 print(e)
-
                 return
 
     def closeEvent(self, a0: QCloseEvent):

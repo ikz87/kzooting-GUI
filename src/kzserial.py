@@ -39,25 +39,9 @@ def read_dict_from_port(port):
     line = port.readline().decode()
     return json.loads(line)
 
-def get_response_from_request(port, request):
-    """
-    Sends a request to the pico and waits until
-    it responds to that request with an
-    adequate message
-    """
-    port.write((request + "\n").encode())
-
-    # Wait for a message that matches the request
-    while True:
-        message = read_dict_from_port(port)
-        if message["message_type"] == request + "_response":
-            break
     return message
 
 
-@dataclass
-class Response:
-    message_type: str
 
 @dataclass
 class GeneralConfigs:
@@ -75,7 +59,7 @@ class KeyActions:
 
 
 @dataclass
-class ConfigsData:
+class Configs:
     general: GeneralConfigs
     key_1: KeyActions
     key_2: KeyActions
@@ -87,6 +71,42 @@ class ConfigsData:
     key_8: KeyActions
     key_9: KeyActions
 
+
+
 @dataclass
-class ConfigsRequestResponse(Response, ConfigsData):
-    message_type: str = field(default="configs_request_response", init=False)
+class KeyState:
+    state: bool
+    distance: float
+
+
+@dataclass
+class Info:
+    temperature: float
+    key_1: KeyState
+    key_2: KeyState
+    key_3: KeyState
+    key_4: KeyState
+    key_5: KeyState
+    key_6: KeyState
+    key_7: KeyState
+    key_8: KeyState
+    key_9: KeyState
+
+
+
+def get_response_from_request(port, request):
+    """
+    Sends a request to the pico and waits until
+    it responds to that request with an
+    adequate message
+    """
+    port.write((request + "\n").encode())
+
+    constructor = {
+        "info_request": Info,
+        "configs_request": Configs,
+    }
+
+    # Wait for a message that matches the request
+    data = read_dict_from_port(port)
+    return from_dict(constructor[request], data=data)
