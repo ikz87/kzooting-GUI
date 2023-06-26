@@ -202,10 +202,13 @@ class MainWindow(QMainWindow):
             # Try to get configs from pico
             self.rpp.write("configs_request\n".encode())
             while True:
-                configs_dict = kzserial.read_dict_from_port(self.rpp)
-                if configs_dict["message_type"] == 1:
-                    print(configs_dict)
-                    break
+                try:
+                    configs_dict = kzserial.read_dict_from_port(self.rpp)
+                    if configs_dict["message_type"] == "configs_request_response":
+                        print(configs_dict)
+                        break
+                except:
+                    pass
             self.info_thread = kthread.KThread(target=self.update_pico_info,
                                                args=([self.rpp]))
             self.info_thread.start()

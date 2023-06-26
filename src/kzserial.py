@@ -30,5 +30,3 @@ def get_serial_ports():
 def read_dict_from_port(port):
     line = port.readline().decode()
     return json.loads(line)
-
-
