@@ -3,6 +3,8 @@ import serial
 import sys
 import glob
 import json
+from dataclasses import dataclass, is_dataclass, field, asdict
+from dacite import from_dict
 
 def get_serial_ports():
     if sys.platform.startswith('win'):
@@ -32,3 +34,38 @@ def read_dict_from_port(port):
     return json.loads(line)
 
 
+@dataclass
+class Response:
+    message_type: str
+
+@dataclass
+class GeneralConfigs:
+    rapid_trigger: bool
+    sensitivity: float
+    top_deadzone: float
+    bootom_deadzone: float
+    actuation_point: float
+    actuation_reset: float
+
+
+@dataclass
+class KeyActions:
+    actions: list[list[str]]
+
+
+@dataclass
+class ConfigsData:
+    general: GeneralConfigs
+    key_1: KeyActions
+    key_2: KeyActions
+    key_3: KeyActions
+    key_4: KeyActions
+    key_5: KeyActions
+    key_6: KeyActions
+    key_7: KeyActions
+    key_8: KeyActions
+    key_9: KeyActions
+
+@dataclass
+class ConfigsRequestResponse(Response, ConfigsData):
+    message_type: str = field(default="configs_request_response", init=False)
