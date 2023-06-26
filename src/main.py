@@ -122,7 +122,7 @@ class Visualizer(QWidget):
         bar.setInvertedAppearance(True)
         state.attach_listener(
             'info',
-            lambda info: bar.setValue(round(info.key_distance * 100)))
+            lambda info: bar.setValue(round(info[state.key_selected]["distance"] * 100)))
 
         # Set up switch icon
         switch_icon = QPixmap("../assets/switch.png")
@@ -147,8 +147,9 @@ class MainWindow(QMainWindow):
         self.state = state
 
         # Queue for serial comunication requests
-        self.serial_queue = queue.Queue()
-        self.queue_thread = kthread.KThread(target=self.run_queue)
+        self.serial_queue = queue.Queue(maxsize=1)
+        self.queue_thread = kthread.KThread(target=self.run_serial_queue)
+        self.queue_thread.start()
 
         # Add a grid
         self.root_grid = QGridLayout()
@@ -176,8 +177,8 @@ class MainWindow(QMainWindow):
             lambda port: self.update_selected_port(port))
 
         # Get keys information
-        self.info_thread = kthread.KThread(target=self.update_pico_info,
-                                           args=([self.rpp]))
+        self.info_thread = kthread.KThread(target=self.update_pico_info)
+        self.info_thread.start()
 
     def watch_ports(self):
         """
@@ -198,38 +199,32 @@ class MainWindow(QMainWindow):
         Updates selected port from dropdown menu
         """
         try:
-            if self.info_thread.is_alive():
-                self.info_thread.terminate()
             if self.rpp != None:
                 self.rpp.close()
             self.rpp = serial.Serial(port, timeout=0.5)
-            self.info_thread = kthread.KThread(target=self.update_pico_info,
-                                               args=([self.rpp]))
-            self.info_thread.start()
+
         except (OSError, serial.SerialException):
             self.rpp = None
 
-    def update_pico_info(self, port):
+    def update_pico_info(self):
         """
-        Updates the keys info dict from a serial port
+        Queues a info request
         """
         while True:
-            try:
-                self.serial_queue.put(("info_request", self.state.setter('info'), port), block=True)
-                #pico_info = kzserial.get_response_from_request(port, "info_request")
-                #self.state.key_distance = pico_info.__dict__[self.state.key_selected].distance
-            # If anything goes wrong, return from the thread
-            except Exception as e:
-                print(e)
-                return
+            if self.serial_queue.empty():
+                self.serial_queue.put(("info_request", self.state.setter('info')), block=False)
+            time.sleep(0.01)
 
     def run_serial_queue(self):
         while True:
-            (request, callback, port) = self.queue.get(block=True)
-            response = kzserial.get_response_from_request(port, request)
-            callback(response)
-            print(response)
-            # Some code to update the target goes here
+            if not self.serial_queue.empty():
+                (request, callback) = self.serial_queue.get(block=False)
+                while True:
+                    try:
+                        response = kzserial.get_response_from_request(self.rpp, request)
+                        callback(response)
+                    except (OSError, serial.SerialException, AttributeError):
+                        time.sleep(0.01)
 
     def closeEvent(self, a0: QCloseEvent):
         """
@@ -238,10 +233,17 @@ class MainWindow(QMainWindow):
         if self.info_thread.is_alive():
             self.info_thread.terminate()
             self.info_thread.join()
+        print("info is dead")
 
         if self.watch_thread.is_alive():
             self.watch_thread.terminate()
             self.watch_thread.join()
+        print("watch is dead")
+
+        if self.queue_thread.is_alive():
+            self.queue_thread.terminate()
+            self.queue_thread.join()
+        print("queue is dead")
 
         return super().closeEvent(a0)
 
