@@ -199,6 +199,11 @@ class MainWindow(QMainWindow):
             if self.rpp != None:
                 self.rpp.close()
             self.rpp = serial.Serial(port, timeout=0.5)
+            self.rpp.write("configs_request".encode())
+            try:
+                kzserial.read_dict_from_port(self.rpp)
+            except:
+                pass
             self.info_thread = kthread.KThread(target=self.update_pico_info,
                                                args=([self.rpp]))
             self.info_thread.start()
