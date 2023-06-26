@@ -10,7 +10,7 @@ import collections
 import queue
 from PyQt5.QtGui import *
 from PyQt5.QtWidgets import *
-from PyQt5.QtCore import Qt, pyqtSignal, QObject
+from PyQt5.QtCore import Qt, pyqtSignal, QObject, QTimer
 
 
 class State(QObject):
@@ -23,39 +23,21 @@ class State(QObject):
     def __init__(self):
         super(QObject, self).__init__()
         self.__dict__['listeners'] = collections.defaultdict(list)
-        self.__dict__['lock'] = threading.RLock()
-
         self.__update_signal.connect(self.__execute_callbacks)
 
     def attach_listener(self, property_name, callback):
-        with self.lock:
-            self.listeners[property_name].append(callback)
+        self.listeners[property_name].append(callback)
 
     def setter(self, property_name):
-        def __setter(value):
-            with self:
-                return self.__setattr__(property_name, value)
-        return __setter
-
-    def __enter__(self):
-        self.lock.acquire()
-        return self
-
-    def __exit__(self, type, value, traceback):
-        self.lock.release()
+        return lambda value: self.__setattr__(property_name, value)
 
     def __execute_callbacks(self, property_name, value):
         for callback in self.listeners.get(property_name, []):
             callback(value)
 
-    def __getattr__(self, property_name):
-        with self.lock:
-            return self.__dict__[property_name]
-
     def __setattr__(self, property_name, value):
-        with self.lock:
-            self.__dict__[property_name] = value
-            self.__update_signal.emit(property_name, value)
+        self.__dict__[property_name] = value
+        self.__update_signal.emit(property_name, value)
 
 
 
@@ -165,11 +147,6 @@ class MainWindow(QMainWindow):
         state = State()
         self.state = state
 
-        # Queue for serial comunication requests
-        self.serial_queue = queue.Queue(maxsize=10)
-        self.queue_thread = kthread.KThread(target=self.run_serial_queue)
-        self.queue_thread.start()
-
         # Add a grid
         self.root_grid = QGridLayout()
         self.root_window = QWidget()
@@ -188,30 +165,38 @@ class MainWindow(QMainWindow):
 
         # Watch for changes in ports directory
         self.rpp = None
-        self.watch_thread = kthread.KThread(target=self.watch_ports)
-        self.watch_thread.start()
+
+        watcher = inotify.adapters.Inotify(block_duration_s=0.01)
+        watcher.add_watch("/dev/")
+
+        def watch_ports():
+            """
+            Watches for changes in /dev/tty and
+            updates ports accordingly
+            """
+            for event in watcher.event_gen(yield_nones=False, timeout_s=0.01):
+                (_, event_types, path, filename) = event
+                if "ttyA" in filename:
+                    if "IN_CLOSE_NOWRITE" in event_types or "IN_DELETE" in event_types:
+                        self.state.available_ports = kzserial.get_serial_ports()
+
+        self.state.available_ports = kzserial.get_serial_ports()
+        timer1 = QTimer(self)
+        timer1.timeout.connect(watch_ports)
+        timer1.start(1000)
+
+        timer2 = QTimer(self)
+        timer2.timeout.connect(self.update_pico_info)
+        timer2.start(10)
 
         state.attach_listener(
             'selected_port',
             lambda port: self.update_selected_port(port))
 
         # Get keys information
-        self.info_thread = kthread.KThread(target=self.update_pico_info)
-        self.info_thread.start()
+        #self.info_thread = kthread.KThread(target=self.update_pico_info)
+        #self.info_thread.start()
 
-    def watch_ports(self):
-        """
-        Watches for changes in /dev/tty and
-        updates ports accordingly
-        """
-        self.state.available_ports = kzserial.get_serial_ports()
-        watcher = inotify.adapters.Inotify()
-        watcher.add_watch("/dev/")
-        for event in watcher.event_gen(yield_nones=False):
-            (_, event_types, path, filename) = event
-            if "ttyA" in filename:
-                if "IN_CLOSE_NOWRITE" in event_types or "IN_DELETE" in event_types:
-                    self.state.available_ports = kzserial.get_serial_ports()
 
     def update_selected_port(self, port):
         """
@@ -220,63 +205,24 @@ class MainWindow(QMainWindow):
         try:
             if self.rpp != None:
                 self.rpp.close()
-            self.rpp = serial.Serial(port, timeout=0.5)
-
-            # Queue a ocnfig request
-            self.serial_queue.put(("configs_request", self.state.setter("configs")), block=True)
-
-        except (OSError, serial.SerialException):
+            self.rpp = serial.Serial(port, timeout=0.01)
+            response = kzserial.get_response_from_request(self.rpp, "info_request")
+            self.state.configs = response
+        except (OSError, serial.SerialException, json.JSONDecodeError):
             self.rpp = None
 
     def update_pico_info(self):
         """
         Queues a info request
         """
-        while True:
-            #if self.serial_queue.empty():
-            self.serial_queue.put(("info_request", self.state.setter('info')), block=True)
-
-    def run_serial_queue(self):
-        req_count = 0
-        while True:
-            (request, callback) = self.serial_queue.get(block=True)
-            print("\n", request, self.rpp)
+        try:
             if self.rpp != None:
-                while True:
-                    counter = 1
-                    try:
-                        response = kzserial.get_response_from_request(self.rpp, request)
-                        print("\nRequest number:", req_count, "is", request)
-                        print(response)
-                        callback(response)
-                        req_count += 1
-                        break
-                #except (OSError, serial.SerialException):
-                    except Exception as e:
-                        print(e)
-                        pass
-                    counter += 1
-            time.sleep(0.1)
+                response = kzserial.get_response_from_request(self.rpp, "info_request")
+                self.state.info = response
+        except Exception as e:
+            print(e)
 
     def closeEvent(self, a0: QCloseEvent):
-        """
-        Terminates threads and closes the main window
-        """
-        if self.info_thread.is_alive():
-            self.info_thread.terminate()
-            self.info_thread.join()
-        print("info is dead")
-
-        if self.watch_thread.is_alive():
-            self.watch_thread.terminate()
-            self.watch_thread.join()
-        print("watch is dead")
-
-        if self.queue_thread.is_alive():
-            self.queue_thread.terminate()
-            self.queue_thread.join()
-        print("queue is dead")
-
         return super().closeEvent(a0)
 
 
