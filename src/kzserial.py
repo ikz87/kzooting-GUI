@@ -7,6 +7,10 @@ from dataclasses import dataclass, is_dataclass, field, asdict
 from dacite import from_dict
 
 def get_serial_ports():
+    """
+    Returns a list of all serial  ports
+    that *can* be open
+    """
     if sys.platform.startswith('win'):
         ports = ['COM%s' % (i + 1) for i in range(256)]
     elif sys.platform.startswith('linux') or sys.platform.startswith('cygwin'):
@@ -28,10 +32,27 @@ def get_serial_ports():
 
     return result
 
-
 def read_dict_from_port(port):
+    """
+    Reads a dictionary from the port provided
+    """
     line = port.readline().decode()
     return json.loads(line)
+
+def get_response_from_request(port, request):
+    """
+    Sends a request to the pico and waits until
+    it responds to that request with an
+    adequate message
+    """
+    port.write((request + "\n").encode())
+
+    # Wait for a message that matches the request
+    while True:
+        message = read_dict_from_port(port)
+        if message["message_type"] == request + "_response":
+            break
+    return message
 
 
 @dataclass
