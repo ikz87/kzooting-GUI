@@ -146,6 +146,10 @@ class MainWindow(QMainWindow):
         state = State()
         self.state = state
 
+        # Queue for serial comunication requests
+        self.serial_queue = queue.Queue()
+        self.queue_thread = kthread.KThread(target=self.run_queue)
+
         # Add a grid
         self.root_grid = QGridLayout()
         self.root_window = QWidget()
@@ -211,17 +215,20 @@ class MainWindow(QMainWindow):
         """
         while True:
             try:
-                pico_info = kzserial.get_response_from_request(port, "info_request")
-                self.state.key_distance = pico_info.__dict__[self.state.key_selected].distance
-
-            # Ignore json errors, they come from the pico 
-            # sending some garbage through the serial port
-            except json.decoder.JSONDecodeError:
-                pass
-            # If anything else happens, return from the thread
+                self.serial_queue.put(("info_request", self.state.info, port), block=True)
+                #pico_info = kzserial.get_response_from_request(port, "info_request")
+                #self.state.key_distance = pico_info.__dict__[self.state.key_selected].distance
+            # If anything goes wrong, return from the thread
             except Exception as e:
                 print(e)
                 return
+
+    def run_serial_queue(self):
+        while True:
+            (request, target, port) = self.queue.get(block=True)
+            response = kzserial.get_response_from_request(port, request)
+            print(response)
+            # Some code to update the target goes here
 
     def closeEvent(self, a0: QCloseEvent):
         """
