@@ -1,13 +1,10 @@
 import kzserial
 import sys
 import serial
-import kthread
-import threading
 import time
 import inotify.adapters
 import json
 import collections
-import queue
 from PyQt5.QtGui import *
 from PyQt5.QtWidgets import *
 from PyQt5.QtCore import Qt, pyqtSignal, QObject, QTimer
@@ -19,10 +16,12 @@ class State(QObject):
     state in a centralized manner. Callbacks are always executed
     on the main thread of the application using Qt Signals.
     """
+
     __update_signal = pyqtSignal(str, object)
+
     def __init__(self):
         super(QObject, self).__init__()
-        self.__dict__['listeners'] = collections.defaultdict(list)
+        self.__dict__["listeners"] = collections.defaultdict(list)
         self.__update_signal.connect(self.__execute_callbacks)
 
     def attach_listener(self, property_name, callback):
@@ -40,12 +39,12 @@ class State(QObject):
         self.__update_signal.emit(property_name, value)
 
 
-
 class Filler(QLabel):
     """
     Filler class only containing a label
     To be removed when actual widgets are added
     """
+
     def __init__(self):
         super(Filler, self).__init__()
         self.setText("Some filler")
@@ -55,13 +54,13 @@ class GeneralConfigs(QWidget):
     """
     Top left quadrant of the window
     """
+
     def __init__(self, state):
         super(GeneralConfigs, self).__init__()
 
         # Set up dropdown menu for ports
         ports_menu = QComboBox()
-        ports_menu.setPlaceholderText("Select port")
-        ports_menu.textActivated.connect(state.setter('selected_port'))
+        ports_menu.textActivated.connect(state.setter("selected_port"))
         self.was_empty = True
 
         def update_ports(ports):
@@ -72,7 +71,7 @@ class GeneralConfigs(QWidget):
                 ports_menu.setCurrentText(ports[0])
                 state.selected_port = ports[0]
                 self.was_empty = False
-            else:
+            elif len(ports) == 0:
                 self.was_empty = True
 
         state.attach_listener("available_ports", update_ports)
@@ -88,6 +87,7 @@ class KeyConfigs(QWidget):
     """
     Top right quadrant of the window
     """
+
     def __init__(self, state):
         super(KeyConfigs, self).__init__()
 
@@ -95,7 +95,8 @@ class KeyConfigs(QWidget):
         keys_menu = QComboBox()
 
         keys_menu.currentIndexChanged.connect(
-            lambda value: state.setter('key_selected')(f"key_{value + 1}"))
+            lambda value: state.setter("key_selected")(f"key_{value + 1}")
+        )
 
         for i in range(9):
             keys_menu.addItem(f"key_{i+1}")
@@ -111,6 +112,7 @@ class Visualizer(QWidget):
     """
     Bottom right quadrant of the window
     """
+
     def __init__(self, state):
         super(Visualizer, self).__init__()
 
@@ -122,8 +124,11 @@ class Visualizer(QWidget):
         bar.setMinimum(0)
         bar.setInvertedAppearance(True)
         state.attach_listener(
-            'info',
-            lambda info: bar.setValue(round(info[state.key_selected]["distance"] * 100)))
+            "info",
+            lambda info: bar.setValue(
+                round(info[state.key_selected]["distance"] * 100)
+            ),
+        )
 
         # Set up switch icon
         switch_icon = QPixmap("../assets/switch.png")
@@ -142,6 +147,7 @@ class MainWindow(QMainWindow):
     """
     Main aplication window
     """
+
     def __init__(self):
         super(MainWindow, self).__init__()
         state = State()
@@ -180,35 +186,30 @@ class MainWindow(QMainWindow):
                     if "IN_CLOSE_NOWRITE" in event_types or "IN_DELETE" in event_types:
                         self.state.available_ports = kzserial.get_serial_ports()
 
+        state.attach_listener(
+            "selected_port", lambda port: self.update_open_port(port)
+        )
+
         self.state.available_ports = kzserial.get_serial_ports()
         timer1 = QTimer(self)
         timer1.timeout.connect(watch_ports)
-        timer1.start(1000)
+        timer1.start(500)
 
         timer2 = QTimer(self)
         timer2.timeout.connect(self.update_pico_info)
         timer2.start(10)
 
-        state.attach_listener(
-            'selected_port',
-            lambda port: self.update_selected_port(port))
-
-        # Get keys information
-        #self.info_thread = kthread.KThread(target=self.update_pico_info)
-        #self.info_thread.start()
-
-
-    def update_selected_port(self, port):
+    def update_open_port(self, port):
         """
-        Updates selected port from dropdown menu
+        Opens a new port and closes the last one
         """
         try:
             if self.rpp != None:
                 self.rpp.close()
-            self.rpp = serial.Serial(port, timeout=0.01)
-            response = kzserial.get_response_from_request(self.rpp, "info_request")
+            self.rpp = serial.Serial(port, timeout=0.1)
+            response = kzserial.get_response_from_request(self.rpp, "configs_request")
             self.state.configs = response
-        except (OSError, serial.SerialException, json.JSONDecodeError):
+        except (OSError, serial.SerialException, json.JSONDecodeError) as e:
             self.rpp = None
 
     def update_pico_info(self):
@@ -219,8 +220,8 @@ class MainWindow(QMainWindow):
             if self.rpp != None:
                 response = kzserial.get_response_from_request(self.rpp, "info_request")
                 self.state.info = response
-        except Exception as e:
-            print(e)
+        except (OSError, serial.SerialException, json.JSONDecodeError) as e:
+            pass
 
     def closeEvent(self, a0: QCloseEvent):
         return super().closeEvent(a0)
@@ -233,5 +234,5 @@ def main():
     sys.exit(app.exec())
 
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     main()
