@@ -199,11 +199,13 @@ class MainWindow(QMainWindow):
             if self.rpp != None:
                 self.rpp.close()
             self.rpp = serial.Serial(port, timeout=0.5)
-            self.rpp.write("configs_request".encode())
-            try:
-                kzserial.read_dict_from_port(self.rpp)
-            except:
-                pass
+            # Try to get configs from pico
+            self.rpp.write("configs_request\n".encode())
+            while True:
+                configs_dict = kzserial.read_dict_from_port(self.rpp)
+                if configs_dict["message_type"] == 1:
+                    print(configs_dict)
+                    break
             self.info_thread = kthread.KThread(target=self.update_pico_info,
                                                args=([self.rpp]))
             self.info_thread.start()
@@ -217,7 +219,7 @@ class MainWindow(QMainWindow):
         while True:
             try:
                 pico_info = kzserial.read_dict_from_port(opened_port)
-                print(pico_info)
+                #print(pico_info)
                 self.state.key_distance = pico_info[self.state.key_selected]["distance"]
 
             # Ignore json errors, they come from the pico 
