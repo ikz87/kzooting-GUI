@@ -46,6 +46,6 @@ def get_response_from_request(port, request):
     """
     port.write((request + "\n").encode())
 
-    # Wait for a message that matches the request
     data = read_dict_from_port(port)
+    port.flush()
     return data

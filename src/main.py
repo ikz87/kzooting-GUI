@@ -147,7 +147,7 @@ class MainWindow(QMainWindow):
         self.state = state
 
         # Queue for serial comunication requests
-        self.serial_queue = queue.Queue(maxsize=1)
+        self.serial_queue = queue.Queue(maxsize=10)
         self.queue_thread = kthread.KThread(target=self.run_serial_queue)
         self.queue_thread.start()
 
@@ -203,6 +203,9 @@ class MainWindow(QMainWindow):
                 self.rpp.close()
             self.rpp = serial.Serial(port, timeout=0.5)
 
+            # Queue a ocnfig request
+            self.serial_queue.put(("configs_request", self.state.setter("configs")), block=True)
+
         except (OSError, serial.SerialException):
             self.rpp = None
 
@@ -211,20 +214,30 @@ class MainWindow(QMainWindow):
         Queues a info request
         """
         while True:
-            if self.serial_queue.empty():
-                self.serial_queue.put(("info_request", self.state.setter('info')), block=False)
-            time.sleep(0.01)
+            #if self.serial_queue.empty():
+            self.serial_queue.put(("info_request", self.state.setter('info')), block=True)
 
     def run_serial_queue(self):
+        req_count = 0
         while True:
-            if not self.serial_queue.empty():
-                (request, callback) = self.serial_queue.get(block=False)
+            (request, callback) = self.serial_queue.get(block=True)
+            print("\n", request, self.rpp)
+            if self.rpp != None:
                 while True:
+                    counter = 1
                     try:
                         response = kzserial.get_response_from_request(self.rpp, request)
+                        print("\nRequest number:", req_count, "is", request)
+                        print(response)
                         callback(response)
-                    except (OSError, serial.SerialException, AttributeError):
-                        time.sleep(0.01)
+                        req_count += 1
+                        break
+                #except (OSError, serial.SerialException):
+                    except Exception as e:
+                        print(e)
+                        pass
+                    counter += 1
+            time.sleep(0.1)
 
     def closeEvent(self, a0: QCloseEvent):
         """
