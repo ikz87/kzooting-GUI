@@ -50,13 +50,13 @@ class Filler(QLabel):
         self.setText("Some filler")
 
 
-class GeneralConfigs(QWidget):
+class GeneralInfo(QWidget):
     """
     Top left quadrant of the window
     """
 
     def __init__(self, state):
-        super(GeneralConfigs, self).__init__()
+        super(GeneralInfo, self).__init__()
 
         # Set up dropdown menu for ports
         ports_menu = QComboBox()
@@ -76,11 +76,64 @@ class GeneralConfigs(QWidget):
 
         state.attach_listener("available_ports", update_ports)
 
+        # Set up info strings
+        info_strings = QLabel()
+        info_strings.setText(
+            "Internal temperature: 0°C"
+        )
+
+        state.attach_listener(
+            "info", lambda info:
+                info_strings.setText(
+                    "Internal temperature: " + str(info["temperature"]) + "°C"))
+
+        # Populate grid
+        general_info_grid = QGridLayout()
+        general_info_grid.addWidget(ports_menu, 0, 0, 1, 2)
+        general_info_grid.addWidget(info_strings, 1, 1)
+        self.setLayout(general_info_grid)
+
+
+class GeneralConfigs(QWidget):
+    """
+    Bottom left quadrant of the window
+    """
+    def __init__(self, state):
+        super(GeneralConfigs, self).__init__()
+        self.state = state
+
+        # Own copy of the configs dict
+        state.attach_listener(
+            "configs", lambda configs:
+                update_options_from_dict(configs))
+
+        # Add check boxes and input fields
+        self.rapid_trigger_rb = QRadioButton("Rapid trigger")
+        self.rapid_trigger_rb.setChecked(True)
+        self.rapid_trigger_rb.toggled.connect(self.update_dict_from_options)
+        self.fixed_actuation_rb = QRadioButton("Fixed actuation")
+
+        actuation_method_vbox = QVBoxLayout()
+        actuation_method_vbox.addWidget(self.rapid_trigger_rb)
+        actuation_method_vbox.addWidget(self.fixed_actuation_rb)
+
+        actuation_method = QGroupBox("Actuation method")
+        actuation_method.clicked.connect(self.update_dict_from_options)
+        actuation_method.setLayout(actuation_method_vbox)
+
         # Populate grid
         general_configs_grid = QGridLayout()
-        general_configs_grid.addWidget(ports_menu, 0, 0)
-
+        general_configs_grid.addWidget(actuation_method, 0, 0)
         self.setLayout(general_configs_grid)
+
+        def update_options_from_dict(configs):
+            self.rapid_trigger_rb.setChecked(configs["general"]["rapid_trigger"])
+            pass
+
+    def update_dict_from_options(self):
+        self.state.configs["general"]["rapid_trigger"] = self.rapid_trigger_rb.isChecked()
+        pass
+
 
 
 class KeyConfigs(QWidget):
@@ -104,7 +157,7 @@ class KeyConfigs(QWidget):
         # Populate grid
         key_configs_grid = QGridLayout()
         key_configs_grid.addWidget(keys_menu, 0, 0)
-
+        key_configs_grid.addWidget(Filler(), 1, 0)
         self.setLayout(key_configs_grid)
 
 
@@ -139,7 +192,6 @@ class Visualizer(QWidget):
         grid = QGridLayout()
         grid.addWidget(bar, 0, 0)
         grid.addWidget(switch_label, 0, 1)
-
         self.setLayout(grid)
 
 
@@ -160,14 +212,19 @@ class MainWindow(QMainWindow):
         self.setCentralWidget(self.root_window)
 
         # Create widgets
-        key_configs = KeyConfigs(state)
+        general_info = GeneralInfo(state)
         general_configs = GeneralConfigs(state)
+        key_configs = KeyConfigs(state)
         visualizer = Visualizer(state)
+        save_button = QPushButton("&Save", self)
+        save_button.clicked.connect(self.send_configs_to_pico)
 
         # Populate grid
-        self.root_grid.addWidget(general_configs, 0, 0)
+        self.root_grid.addWidget(general_info, 0, 0)
+        self.root_grid.addWidget(general_configs, 1, 0)
         self.root_grid.addWidget(key_configs, 0, 1)
         self.root_grid.addWidget(visualizer, 1, 1)
+        self.root_grid.addWidget(save_button, 2, 0, 1, 2)
 
         # Watch for changes in ports directory
         self.rpp = None
@@ -196,8 +253,21 @@ class MainWindow(QMainWindow):
         timer1.start(500)
 
         timer2 = QTimer(self)
-        timer2.timeout.connect(self.update_pico_info)
+        timer2.timeout.connect(self.get_info_from_pico)
         timer2.start(10)
+
+    def send_configs_to_pico(self):
+        """
+        Sends a configs to the pico to be rewritten
+        """
+        try:
+            configs_dict = self.state.configs
+            configs_json = json.dumps(configs_dict)
+            print("sending" +configs_json)
+            self.rpp.write((configs_json + "\n").encode())
+            print("done")
+        except:
+            pass
 
     def update_open_port(self, port):
         """
@@ -212,9 +282,9 @@ class MainWindow(QMainWindow):
         except (OSError, serial.SerialException, json.JSONDecodeError) as e:
             self.rpp = None
 
-    def update_pico_info(self):
+    def get_info_from_pico(self):
         """
-        Queues a info request
+        Updates general information
         """
         try:
             if self.rpp != None:
