@@ -101,39 +101,126 @@ class GeneralConfigs(QWidget):
     def __init__(self, state):
         super(GeneralConfigs, self).__init__()
         self.state = state
-
-        # Own copy of the configs dict
-        state.attach_listener(
-            "configs", lambda configs:
-                update_options_from_dict(configs))
+        state.out_configs["general"] = {}
 
         # Add check boxes and input fields
-        self.rapid_trigger_rb = QRadioButton("Rapid trigger")
-        self.rapid_trigger_rb.setChecked(True)
-        self.rapid_trigger_rb.toggled.connect(self.update_dict_from_options)
-        self.fixed_actuation_rb = QRadioButton("Fixed actuation")
+        rapid_trigger_rb = QRadioButton("Rapid trigger")
+        rapid_trigger_rb.setChecked(True)
+        fixed_actuation_rb = QRadioButton("Fixed actuation")
 
         actuation_method_vbox = QVBoxLayout()
-        actuation_method_vbox.addWidget(self.rapid_trigger_rb)
-        actuation_method_vbox.addWidget(self.fixed_actuation_rb)
+        actuation_method_vbox.addWidget(rapid_trigger_rb)
+        actuation_method_vbox.addWidget(fixed_actuation_rb)
 
         actuation_method = QGroupBox("Actuation method")
-        actuation_method.clicked.connect(self.update_dict_from_options)
         actuation_method.setLayout(actuation_method_vbox)
 
+        # Rapid trigger specific options
+        sensitivity = QDoubleSpinBox()
+        sensitivity.setSuffix("mm")
+        sensitivity.setDecimals(1)
+        sensitivity.setRange(0.1, 1)
+        sensitivity.setSingleStep(0.1)
+        sensitivity_label = QLabel()
+        sensitivity_label.setText("Sensitivity")
+        sensitivity_label.setBuddy(sensitivity)
+
+        top_deadzone = QDoubleSpinBox()
+        top_deadzone.setSuffix("mm")
+        top_deadzone.setDecimals(1)
+        top_deadzone.setRange(0.1, 1)
+        top_deadzone.setSingleStep(0.1)
+        top_deadzone_label = QLabel()
+        top_deadzone_label.setText("Top deadzone")
+        top_deadzone_label.setBuddy(top_deadzone)
+
+        bottom_deadzone = QDoubleSpinBox()
+        bottom_deadzone.setSuffix("mm")
+        bottom_deadzone.setDecimals(1)
+        bottom_deadzone.setRange(0.1, 1)
+        bottom_deadzone.setSingleStep(0.1)
+        bottom_deadzone_label = QLabel()
+        bottom_deadzone_label.setText("Bottom deadzone")
+        bottom_deadzone_label.setBuddy(bottom_deadzone)
+
+        rt_options_vbox = QVBoxLayout()
+        rt_options_vbox.addWidget(sensitivity_label)
+        rt_options_vbox.addWidget(sensitivity)
+        rt_options_vbox.addWidget(top_deadzone_label)
+        rt_options_vbox.addWidget(top_deadzone)
+        rt_options_vbox.addWidget(bottom_deadzone_label)
+        rt_options_vbox.addWidget(bottom_deadzone)
+
+        rt_options = QGroupBox("Rapid trigger options")
+        rt_options.setLayout(rt_options_vbox)
+
+        # Fixed actuation scpecific options
+        actuation_point = QDoubleSpinBox()
+        actuation_point.setSuffix("mm")
+        actuation_point.setDecimals(1)
+        actuation_point.setRange(0.3, 3.5)
+        actuation_point.setSingleStep(0.1)
+        actuation_point_label = QLabel()
+        actuation_point_label.setText("Actuation_point")
+        actuation_point_label.setBuddy(actuation_point)
+
+        actuation_reset = QDoubleSpinBox()
+        actuation_reset.setSuffix("mm")
+        actuation_reset.setDecimals(1)
+        actuation_reset.setRange(0.1, 1)
+        actuation_reset.setSingleStep(0.1)
+        actuation_reset_label = QLabel()
+        actuation_reset_label.setText("Actuation_reset")
+        actuation_reset_label.setBuddy(actuation_reset)
+
+        fa_options_vbox = QVBoxLayout()
+        fa_options_vbox.addWidget(actuation_point_label)
+        fa_options_vbox.addWidget(actuation_point)
+        fa_options_vbox.addWidget(actuation_reset_label)
+        fa_options_vbox.addWidget(actuation_reset)
+
+        fa_options = QGroupBox("Fixed actuation options")
+        fa_options.setLayout(fa_options_vbox)
+
         # Populate grid
+        sub_options = QStackedWidget()
+        sub_options.addWidget(rt_options)
+        sub_options.addWidget(fa_options)
+
         general_configs_grid = QGridLayout()
         general_configs_grid.addWidget(actuation_method, 0, 0)
+        general_configs_grid.addWidget(sub_options, 1, 0)
         self.setLayout(general_configs_grid)
 
         def update_options_from_dict(configs):
-            self.rapid_trigger_rb.setChecked(configs["general"]["rapid_trigger"])
-            pass
+            print(configs)
+            rapid_trigger_rb.setChecked(configs["general"]["rapid_trigger"])
+            sensitivity.setValue(configs["general"]["sensitivity"])
+            top_deadzone.setValue(configs["general"]["top_deadzone"])
+            bottom_deadzone.setValue(configs["general"]["bottom_deadzone"])
+            actuation_point.setValue(configs["general"]["actuation_point"])
+            actuation_reset.setValue(configs["general"]["actuation_reset"])
 
-    def update_dict_from_options(self):
-        self.state.configs["general"]["rapid_trigger"] = self.rapid_trigger_rb.isChecked()
-        pass
+        def update_dict_from_options(_configs):
+            state.out_configs["general"]["rapid_trigger"] = rapid_trigger_rb.isChecked()
+            state.out_configs["general"]["sensitivity"] = sensitivity.value()
+            state.out_configs["general"]["top_deadzone"] = top_deadzone.value()
+            state.out_configs["general"]["bottom_deadzone"] = bottom_deadzone.value()
+            state.out_configs["general"]["actuation_point"] = actuation_point.value()
+            state.out_configs["general"]["actuation_reset"] = actuation_reset.value()
 
+            # Update group box that is shown
+            if rapid_trigger_rb.isChecked():
+                sub_options.setCurrentWidget(rt_options)
+            else:
+                sub_options.setCurrentWidget(fa_options)
+
+        sensitivity.valueChanged.connect(update_dict_from_options)
+        top_deadzone.valueChanged.connect(update_dict_from_options)
+        bottom_deadzone.valueChanged.connect(update_dict_from_options)
+        rapid_trigger_rb.toggled.connect(update_dict_from_options)
+        state.attach_listener(
+            "in_configs", update_options_from_dict)
 
 
 class KeyConfigs(QWidget):
@@ -157,7 +244,7 @@ class KeyConfigs(QWidget):
         # Populate grid
         key_configs_grid = QGridLayout()
         key_configs_grid.addWidget(keys_menu, 0, 0)
-        key_configs_grid.addWidget(Filler(), 1, 0)
+        key_configs_grid.addWidget(QLabel(), 1, 0)
         self.setLayout(key_configs_grid)
 
 
@@ -176,12 +263,20 @@ class Visualizer(QWidget):
         bar.setMaximum(400)
         bar.setMinimum(0)
         bar.setInvertedAppearance(True)
+        bar_label = QLabel()
+        bar_label.setText("0.0 mm")
+        bar_label.setAlignment(Qt.AlignmentFlag.AlignCenter)
+        bar_label.setBuddy(bar)
+        bar_vbox = QVBoxLayout()
+        bar_vbox.addWidget(bar_label)
+        bar_vbox.addWidget(bar)
+
+        def update_bar_contents(info):
+            bar.setValue(round(info[state.key_selected]["distance"] * 100))
+            bar_label.setText("{:.1f}".format(info[state.key_selected]["distance"]))
         state.attach_listener(
-            "info",
-            lambda info: bar.setValue(
-                round(info[state.key_selected]["distance"] * 100)
-            ),
-        )
+            "info", update_bar_contents)
+
 
         # Set up switch icon
         switch_icon = QPixmap("../assets/switch.png")
@@ -190,7 +285,7 @@ class Visualizer(QWidget):
 
         # Populate grid
         grid = QGridLayout()
-        grid.addWidget(bar, 0, 0)
+        grid.addLayout(bar_vbox, 0, 0)
         grid.addWidget(switch_label, 0, 1)
         self.setLayout(grid)
 
@@ -204,6 +299,8 @@ class MainWindow(QMainWindow):
         super(MainWindow, self).__init__()
         state = State()
         self.state = state
+        state.in_configs = {}
+        state.out_configs = {}
 
         # Add a grid
         self.root_grid = QGridLayout()
@@ -261,11 +358,11 @@ class MainWindow(QMainWindow):
         Sends a configs to the pico to be rewritten
         """
         try:
-            configs_dict = self.state.configs
+            # Temp code until key configs are also updated
+            configs_dict = self.state.in_configs
+            configs_dict["general"] = self.state.out_configs["general"]
             configs_json = json.dumps(configs_dict)
-            print("sending" +configs_json)
             self.rpp.write((configs_json + "\n").encode())
-            print("done")
         except:
             pass
 
@@ -276,9 +373,9 @@ class MainWindow(QMainWindow):
         try:
             if self.rpp != None:
                 self.rpp.close()
-            self.rpp = serial.Serial(port, timeout=0.1)
+            self.rpp = serial.Serial(port, timeout=1)
             response = kzserial.get_response_from_request(self.rpp, "configs_request")
-            self.state.configs = response
+            self.state.in_configs = response
         except (OSError, serial.SerialException, json.JSONDecodeError) as e:
             self.rpp = None
 
