@@ -193,13 +193,21 @@ class GeneralConfigs(QWidget):
         self.setLayout(general_configs_grid)
 
         def update_options_from_dict(configs):
-            print(configs)
-            rapid_trigger_rb.setChecked(configs["general"]["rapid_trigger"])
+            print(configs["general"]["rapid_trigger"])
+            print(rapid_trigger_rb.isChecked())
             sensitivity.setValue(configs["general"]["sensitivity"])
             top_deadzone.setValue(configs["general"]["top_deadzone"])
             bottom_deadzone.setValue(configs["general"]["bottom_deadzone"])
             actuation_point.setValue(configs["general"]["actuation_point"])
             actuation_reset.setValue(configs["general"]["actuation_reset"])
+
+            # Update group box that is shown
+            if configs["general"]["rapid_trigger"]:
+                rapid_trigger_rb.setChecked(True)
+                sub_options.setCurrentWidget(rt_options)
+            else:
+                fixed_actuation_rb.setChecked(True)
+                sub_options.setCurrentWidget(fa_options)
 
         def update_dict_from_options(_configs):
             state.out_configs["general"]["rapid_trigger"] = rapid_trigger_rb.isChecked()
@@ -208,6 +216,7 @@ class GeneralConfigs(QWidget):
             state.out_configs["general"]["bottom_deadzone"] = bottom_deadzone.value()
             state.out_configs["general"]["actuation_point"] = actuation_point.value()
             state.out_configs["general"]["actuation_reset"] = actuation_reset.value()
+            print(state.out_configs)
 
             # Update group box that is shown
             if rapid_trigger_rb.isChecked():
@@ -215,10 +224,12 @@ class GeneralConfigs(QWidget):
             else:
                 sub_options.setCurrentWidget(fa_options)
 
+        rapid_trigger_rb.toggled.connect(update_dict_from_options)
         sensitivity.valueChanged.connect(update_dict_from_options)
         top_deadzone.valueChanged.connect(update_dict_from_options)
         bottom_deadzone.valueChanged.connect(update_dict_from_options)
-        rapid_trigger_rb.toggled.connect(update_dict_from_options)
+        actuation_point.valueChanged.connect(update_dict_from_options)
+        actuation_reset.valueChanged.connect(update_dict_from_options)
         state.attach_listener(
             "in_configs", update_options_from_dict)
 
