@@ -118,27 +118,27 @@ class GeneralConfigs(QWidget):
         # Rapid trigger specific options
         sensitivity = QDoubleSpinBox()
         sensitivity.setSuffix("mm")
-        sensitivity.setDecimals(1)
+        sensitivity.setDecimals(2)
         sensitivity.setRange(0.1, 1)
-        sensitivity.setSingleStep(0.1)
+        sensitivity.setSingleStep(0.05)
         sensitivity_label = QLabel()
         sensitivity_label.setText("Sensitivity")
         sensitivity_label.setBuddy(sensitivity)
 
         top_deadzone = QDoubleSpinBox()
         top_deadzone.setSuffix("mm")
-        top_deadzone.setDecimals(1)
+        top_deadzone.setDecimals(2)
         top_deadzone.setRange(0.1, 1)
-        top_deadzone.setSingleStep(0.1)
+        top_deadzone.setSingleStep(0.05)
         top_deadzone_label = QLabel()
         top_deadzone_label.setText("Top deadzone")
         top_deadzone_label.setBuddy(top_deadzone)
 
         bottom_deadzone = QDoubleSpinBox()
         bottom_deadzone.setSuffix("mm")
-        bottom_deadzone.setDecimals(1)
+        bottom_deadzone.setDecimals(2)
         bottom_deadzone.setRange(0.1, 1)
-        bottom_deadzone.setSingleStep(0.1)
+        bottom_deadzone.setSingleStep(0.05)
         bottom_deadzone_label = QLabel()
         bottom_deadzone_label.setText("Bottom deadzone")
         bottom_deadzone_label.setBuddy(bottom_deadzone)
@@ -157,18 +157,18 @@ class GeneralConfigs(QWidget):
         # Fixed actuation scpecific options
         actuation_point = QDoubleSpinBox()
         actuation_point.setSuffix("mm")
-        actuation_point.setDecimals(1)
+        actuation_point.setDecimals(2)
         actuation_point.setRange(0.3, 3.5)
-        actuation_point.setSingleStep(0.1)
+        actuation_point.setSingleStep(0.05)
         actuation_point_label = QLabel()
         actuation_point_label.setText("Actuation_point")
         actuation_point_label.setBuddy(actuation_point)
 
         actuation_reset = QDoubleSpinBox()
         actuation_reset.setSuffix("mm")
-        actuation_reset.setDecimals(1)
+        actuation_reset.setDecimals(2)
         actuation_reset.setRange(0.1, 1)
-        actuation_reset.setSingleStep(0.1)
+        actuation_reset.setSingleStep(0.05)
         actuation_reset_label = QLabel()
         actuation_reset_label.setText("Actuation_reset")
         actuation_reset_label.setBuddy(actuation_reset)
@@ -285,6 +285,15 @@ class Visualizer(QWidget):
         def update_bar_contents(info):
             bar.setValue(round(info[state.key_selected]["distance"] * 100))
             bar_label.setText("{:.1f}".format(info[state.key_selected]["distance"]))
+
+            # Update color
+            if info[state.key_selected]["state"]:
+                bar.setStyleSheet(
+                    "QProgressBar::chunk{background-color: #9cff8f}")
+            else:
+                bar.setStyleSheet(
+                    "QProgressBar::chunk{background-color: #ff8f8f}")
+
         state.attach_listener(
             "info", update_bar_contents)
 
