@@ -313,6 +313,9 @@ class MainWindow(QMainWindow):
         state.in_configs = {}
         state.out_configs = {}
 
+        # Use local qss
+        self.setStyleSheet(open("style.qss", "r").read())
+
         # Add a grid
         self.root_grid = QGridLayout()
         self.root_window = QWidget()
