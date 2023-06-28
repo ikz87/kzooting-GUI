@@ -1,8 +1,92 @@
 * {
-    background-color: #0E111F;
+    background-color: #0C0E1A;
     color: #F9FCFF;
+    font-family: CartographCF;
+    font-size: 15px;
 }
 
+QComboBox, QListView, QPushButton, QGroupBox, QProgressBar {
+    background-color: #1B203C;
+    border: 2px solid #B2CFFF;
+}
+
+QComboBox {
+    padding: 2 0 4 8;
+    selection-background-color: #B2CFFF;
+    selection-color: #1B203C;
+}
+
+QComboBox:on {
+    padding: 4 0 2 0;
+    background-color: #B2CFFF;
+}
+
+QComboBox:drop-down {
+    background-color: #1B203C;
+}
+
+QPushButton {
+    padding: 5 0 8 0;
+}
+
+QGroupBox {
+    margin: 23 0 15 0;
+}
+
+QGroupBox::title {
+    subcontrol-origin: margin;
+    subcontrol-position: top left;
+    padding: 0 0 2 0;
+    background-color: #1B203C;
+    border: 2px solid #B2CFFF;
+}
+
+QLabel[text="Sensitivity"], 
+QLabel[text="Top deadzone"], 
+QLabel[text="Bottom deadzone"], 
+QLabel[text="Bottom deadzone"], 
+QLabel[text="Actuation point"], 
+QLabel[text="Actuation reset"],
+QRadioButton {
+    background-color: #1B203C;
+}
+
+QRadioButton::indicator {
+    border: 2px solid #B2CFFF;
+    border-radius: 7px;
+}
+
+QRadioButton::indicator:unchecked {
+    background-color: #0C0E1A;
+}
+
+QRadioButton::indicator:checked {
+    background-color: #B2CFFF;
+}
+    
+
+QPushButton:pressed {
+    padding: 7 0 5 0;
+    background-color: #B2CFFF;
+    color: #1B203C;
+}
+
+QDoubleSpinBox {
+    border: 2px solid #B2CFFF;
+    margin: 0 0 10 0;
+}
+
+QDoubleSpinBox::up-button, QDoubleSpinBox::down-button {
+    background-color: #1B203C;
+    height: 0;
+}
+
+QProgressBar {
+    margin: 0 0 15 0;
+    width: 40px;
+}
+    
 QProgressBar::chunk {
-    background-color: #FF8F8F;
+    background-color: #C4BCCA;
+    height: 1px;
 }
