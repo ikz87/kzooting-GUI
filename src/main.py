@@ -79,13 +79,15 @@ class GeneralInfo(QWidget):
         # Set up info strings
         info_strings = QLabel()
         info_strings.setText(
-            "Internal temperature: 0.00°C"
+            "Internal temperature: 0.00°C\n"
+            "Reports per second: 000 (0.00ms)\n"
         )
 
         state.attach_listener(
             "info", lambda info:
                 info_strings.setText(
-                    "Internal temperature: " + str(round(info["temperature"],1)) + "°C"))
+                    f"Internal temperature: {info['temperature']:.1f}°C\n"
+                    f"Reports per second: {1000/info['report_time']:.0f} ({info['report_time']:.2f}ms)"))
 
         # Populate grid
         general_info_grid = QGridLayout()
