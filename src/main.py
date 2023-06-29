@@ -289,21 +289,24 @@ class RemapperHBox(QHBoxLayout):
 
                 # If there are less keycodes now, delete the old
                 # remaining ones from the dict
-                action_length = len(state.out_configs[state.selected_key]["actions"][j])
-                while keycode_count < action_length:
-                    state.out_configs[state.selected_key]["actions"][j].pop(-1)
+                actions = state.out_configs[state.selected_key]["actions"][j]
+                actions_length = len(actions)
+                while keycode_count < actions_length:
+                    actions.pop(-1)
 
                 # Change the dict's keycodes
                 for k in range(keycode_count):
                     curr_combo_box = curr_hbox.itemAt(k+1).widget()
-
+                    curr_keycode = keycodes.values[curr_combo_box.currentText()]
                     # If an index is already there, just change the
                     # value
-                    if k < len(state.out_configs[state.selected_key]["actions"][j]):
-                        state.out_configs[state.selected_key]["actions"][j][k] = keycodes.values[curr_combo_box.currentText()]
+                    if k < actions_length:
+                        actions[k] = curr_keycode
                     # Else, append it
                     else:
-                        state.out_configs[state.selected_key]["actions"][j].append(keycodes.values[curr_combo_box.currentText()])
+                        actions.append(curr_keycode)
+
+                state.out_configs[state.selected_key]["actions"][j] = actions
 
         # Add all combo boxes from the dict
         for k in range(len(current_combo_boxes[j])):
