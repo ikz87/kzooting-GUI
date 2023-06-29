@@ -250,12 +250,14 @@ class RemapperComboBox(QComboBox):
         for key_string in keycodes.values:
             self.addItem(key_string)
         self.setCurrentText(keycodes.strings[keycode])
-        #self.setEditable(True)
-        #self.lineEdit().setReadOnly(True)
-        #self.lineEdit().setAlignment(Qt.AlignmentFlag.AlignHCenter)
+        self.view().setMinimumWidth(170)
         self.setStyleSheet(
-            "QComboBox{max-width: 180px; min-width: 20px;}"
+            "QComboBox{width: 40px;}"
         )
+        # Alignment
+        #self.setEditable(True)
+        #self.lineEdit().setAlignment(Qt.AlignmentFlag.AlignHCenter)
+        #self.lineEdit().setReadOnly(True)
 
 
 class RemapperHBox(QHBoxLayout):
@@ -281,12 +283,16 @@ class RemapperHBox(QHBoxLayout):
 
             # Get vbox
             curr_vbox = remap_sl.widget(curr_key).layout()
-            for j in range(curr_vbox.count()):
+
+            # Get actions count, that is:
+            # total items - stretch, buttons hbox (2)
+            actions_count = curr_vbox.count()-2
+            for j in range(actions_count):
                 # Get hbox
                 curr_hbox = curr_vbox.itemAt(j).layout()
 
                 # Get the keycode count. That is:
-                # total widgets - label, stretch, buttons (4)
+                # total items - label, stretch, buttons (4)
                 keycode_count = curr_hbox.count()-4
 
                 # If there are less keycodes now, delete the old
@@ -320,9 +326,11 @@ class RemapperHBox(QHBoxLayout):
 
 
         def add_key():
-            add_button_item = self.takeAt(self.count()-1)
-            remove_button_item = self.takeAt(self.count()-1)
-            stretch_item = self.takeAt(self.count()-1)
+            # Get items
+            item_count = self.count()
+            add_button_item = self.takeAt(item_count-1)
+            remove_button_item = self.takeAt(item_count-2)
+            stretch_item = self.takeAt(item_count-3)
 
             # Remove buttons and stretch from layout
             self.removeItem(add_button_item)
@@ -346,11 +354,12 @@ class RemapperHBox(QHBoxLayout):
         def remove_key():
             # Only remove if there is at least 2
             # keys
-            if self.count() < 6:
+            item_count = self.count()
+            if item_count < 6:
                 return
 
             # Remove the last key from the layout
-            last_key = self.takeAt(self.count()-4)
+            last_key = self.takeAt(item_count-4)
             self.removeItem(last_key)
             last_key_widget = last_key.widget()
             last_key_widget.deleteLater()
@@ -396,6 +405,9 @@ class KeyConfigs(QWidget):
         remap_sl = QStackedWidget()
         for i in range(9):
             remap_gb = QGroupBox(f"Key_{i+1} actions:")
+            remap_gb.setStyleSheet(
+                "QGroupBox {min-height: 250px;}"
+            )
             remap_gb.setLayout(QVBoxLayout())
             remap_sl.addWidget(remap_gb)
 
@@ -419,8 +431,6 @@ class KeyConfigs(QWidget):
 
             update_options_from_key(int(state.selected_key[-1])-1)
 
-
-
         def empty_layout(layout):
             # Empties a layout recursively
             while(layout.count()):
@@ -443,13 +453,64 @@ class KeyConfigs(QWidget):
             actions_vbox = group_box.layout()
             current_combo_boxes = box_keycodes[key_string]
 
-            # First we delete all previous widgets
+            # First delete all previous widgets
             empty_layout(actions_vbox)
 
-            # Then we populate the grid again
+            # Then populate the grid again
             for j in range(len(current_combo_boxes)):
                 keys_hbox = RemapperHBox(j, state, remap_sl, box_keycodes)
                 actions_vbox.addLayout(keys_hbox)
+            actions_vbox.addStretch()
+
+            def add_action():
+                # Update box_keycodes dict
+                box_keycodes[state.selected_key].append([4])
+
+                # Get items
+                item_count = actions_vbox.count()
+                buttons_item = actions_vbox.takeAt(item_count-1)
+                stretch_item = actions_vbox.takeAt(item_count-2)
+
+                # Remove buttons from layout
+                actions_vbox.removeItem(buttons_item)
+                actions_vbox.removeItem(stretch_item)
+
+                # Add the new RemapperHBox
+                actions_vbox.addLayout(RemapperHBox(item_count-2, state, remap_sl, box_keycodes))
+
+                # Add buttons and stretch again
+                actions_vbox.addItem(stretch_item)
+                actions_vbox.addItem(buttons_item)
+
+
+
+            def remove_action():
+                # Only remove if there are at least
+                # two actions
+                item_count = actions_vbox.count()
+                if item_count < 4:
+                    return
+
+                # Remove the last action from the layout
+                last_action = actions_vbox.takeAt(item_count-3)
+                last_action_layout = last_action.layout()
+                empty_layout(last_action_layout)
+                actions_vbox.removeItem(last_action)
+
+                # Reflect the changes on the
+                # box_keycodes dict
+                box_keycodes[state.selected_key].pop(-1)
+
+            # Now add buttons
+            buttons_hbox = QHBoxLayout()
+            add_button = QPushButton("Add action")
+            add_button.clicked.connect(add_action)
+            remove_button = QPushButton("Remove action")
+            remove_button.clicked.connect(remove_action)
+            buttons_hbox.addWidget(add_button)
+            buttons_hbox.addWidget(remove_button)
+            actions_vbox.addLayout(buttons_hbox)
+
 
         keys_menu.currentIndexChanged.connect(
             update_options_from_key
@@ -655,7 +716,6 @@ class MainWindow(QMainWindow):
             # Temp code until key configs are also updated
             #configs_dict = self.state.in_configs
             configs_dict = self.state.out_configs
-            print(configs_dict)
             configs_json = json.dumps(configs_dict)
             self.rpp.write((configs_json + "\n").encode())
         except:

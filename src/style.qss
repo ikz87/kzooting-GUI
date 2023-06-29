@@ -27,6 +27,7 @@ QComboBox:drop-down {
 
 QGroupBox {
     margin: 23 0 15 0;
+    width: 315px;
 }
 
 QGroupBox::title {
