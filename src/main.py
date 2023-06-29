@@ -3,7 +3,6 @@
 import kzserial
 import sys
 import serial
-import time
 import inotify.adapters
 import json
 import keycodes
