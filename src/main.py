@@ -256,6 +256,116 @@ class RemapperComboBox(QComboBox):
         )
 
 
+class RemapperHBox(QHBoxLayout):
+    """
+    The QHBoxLayout containing all keys
+    of an action
+    """
+    def __init__(self, j, state, remap_sl, box_keycodes):
+        super(RemapperHBox, self).__init__()
+
+        current_combo_boxes = box_keycodes[state.selected_key]
+        # Add label at the left
+        number_label = QLabel(f"{j+1}:")
+        number_label.setStyleSheet(
+            "background-color: #1B203C;"
+        )
+        self.addWidget(number_label)
+
+        def update_dict_from_options():
+            # Updates the out configs according to 
+            # the RemapperComboBoxes
+            curr_key = int(state.selected_key[-1])-1
+
+            # Get vbox
+            curr_vbox = remap_sl.widget(curr_key).layout()
+            for j in range(curr_vbox.count()):
+                # Get hbox
+                curr_hbox = actions_vbox.itemAt(j).layout()
+
+                # Get the keycode count. That is:
+                # total widgets - label, stretch, buttons (4)
+                keycode_count = curr_hbox.count()-4
+
+                # If there are less keycodes now, delete the old
+                # remaining ones from the dict
+                action_length = len(state.out_configs[state.selected_key]["actions"][j])
+                while keycode_count < action_length:
+                    state.out_configs[state.selected_key]["actions"][j].pop(-1)
+
+                # Change the dict's keycodes
+                for k in range(keycode_count):
+                    curr_combo_box = curr_hbox.itemAt(k+1).widget()
+
+                    # If an index is already there, just change the
+                    # value
+                    if k < len(state.out_configs[state.selected_key]["actions"][j]):
+                        state.out_configs[state.selected_key]["actions"][j][k] = keycodes.values[curr_combo_box.currentText()]
+                    # Else, append it
+                    else:
+                        state.out_configs[state.selected_key]["actions"][j].append(keycodes.values[curr_combo_box.currentText()])
+
+        # Add all combo boxes from the dict
+        for k in range(len(current_combo_boxes[j])):
+            new_remapper = RemapperComboBox(current_combo_boxes[j][k])
+            self.addWidget(new_remapper)
+            new_remapper.currentTextChanged.connect(update_dict_from_options)
+
+        self.addStretch()
+
+
+        def add_key():
+            add_button_item = self.takeAt(self.count()-1)
+            remove_button_item = self.takeAt(self.count()-1)
+            stretch_item = self.takeAt(self.count()-1)
+
+            # Remove buttons and stretch from layout
+            self.removeItem(add_button_item)
+            self.removeItem(remove_button_item)
+            self.removeItem(stretch_item)
+
+            # Add the new RemapperComboBox
+            new_remapper = RemapperComboBox(4)
+            self.addWidget(new_remapper)
+            new_remapper.currentTextChanged.connect(update_dict_from_options)
+
+            # Add buttons and stretch again
+            self.addItem(stretch_item)
+            self.addItem(remove_button_item)
+            self.addItem(add_button_item)
+
+            # Reflect the changes made in
+            # the box_keycodes dict
+            box_keycodes[key_string][j].append(4)
+
+        def remove_key():
+            # Only remove if there is at least 2
+            # keys
+            if self.count() < 6:
+                return
+
+            # Remove the last key from the layout
+            last_key = self.takeAt(self.count()-4)
+            self.removeItem(last_key)
+            last_key_widget = last_key.widget()
+            last_key_widget.deleteLater()
+
+            # Reflect the changes made in
+            # the box_keycodes dict
+            box_keycodes[key_string][j].pop(-1)
+            update_dict_from_options()
+
+
+        # Add buttons at the right
+        add_button = QPushButton("+")
+        add_button.clicked.connect(add_key)
+        self.addWidget(add_button)
+
+        remove_button = QPushButton("-")
+        remove_button.clicked.connect(remove_key)
+        self.addWidget(remove_button)
+
+
 class KeyConfigs(QWidget):
     """
     Top right quadrant of the window
@@ -333,97 +443,7 @@ class KeyConfigs(QWidget):
 
             # Then we populate the grid again
             for j in range(len(current_combo_boxes)):
-                keys_hbox = QHBoxLayout()
-
-                # Add label at the left
-                number_label = QLabel(f"{j+1}:")
-                number_label.setStyleSheet(
-                    "background-color: #1B203C;"
-                )
-                keys_hbox.addWidget(number_label)
-
-                def update_dict_from_options():
-                    curr_key = int(state.selected_key[-1])-1
-                    curr_vbox = remap_sl.widget(curr_key).layout()
-                    for j in range(curr_vbox.count()):
-                        curr_hbox = actions_vbox.itemAt(j).layout()
-                        keycode_count = curr_hbox.count()-4
-                        print(keycode_count, len(state.out_configs[state.selected_key]["actions"][j]))
-                        while keycode_count < len(state.out_configs[state.selected_key]["actions"][j]):
-                            state.out_configs[state.selected_key]["actions"][j].pop(-1)
-                        print(keycode_count, len(state.out_configs[state.selected_key]["actions"][j]))
-                        for k in range(keycode_count):
-                            curr_combo_box = curr_hbox.itemAt(k+1).widget()
-                            print(f"{curr_key}, {j}, {k} keycode for key_{curr_key} is {curr_combo_box.currentText()}")
-                            if k < len(state.out_configs[state.selected_key]["actions"][j]):
-                                state.out_configs[state.selected_key]["actions"][j][k] = keycodes.values[curr_combo_box.currentText()]
-                            else:
-                                state.out_configs[state.selected_key]["actions"][j].append(keycodes.values[curr_combo_box.currentText()])
-
-
-                    print(state.out_configs)
-
-
-                # Add all combo boxes from the dict
-                for k in range(len(current_combo_boxes[j])):
-                    new_remapper = RemapperComboBox(current_combo_boxes[j][k])
-                    keys_hbox.addWidget(new_remapper)
-                    new_remapper.currentTextChanged.connect(update_dict_from_options)
-
-                keys_hbox.addStretch()
-
-
-                def add_key():
-                    add_button_item = keys_hbox.takeAt(keys_hbox.count()-1)
-                    remove_button_item = keys_hbox.takeAt(keys_hbox.count()-1)
-                    stretch_item = keys_hbox.takeAt(keys_hbox.count()-1)
-
-                    # Remove buttons and stretch from layout
-                    keys_hbox.removeItem(add_button_item)
-                    keys_hbox.removeItem(remove_button_item)
-                    keys_hbox.removeItem(stretch_item)
-
-                    # Add the new RemapperComboBox
-                    new_remapper = RemapperComboBox(4)
-                    keys_hbox.addWidget(new_remapper)
-                    new_remapper.currentTextChanged.connect(update_dict_from_options)
-
-                    # Add buttons and stretch again
-                    keys_hbox.addItem(stretch_item)
-                    keys_hbox.addItem(remove_button_item)
-                    keys_hbox.addItem(add_button_item)
-
-                    # Reflect the changes made in
-                    # the box_keycodes dict
-                    box_keycodes[key_string][j].append(4)
-
-                def remove_key():
-                    # Only remove if there is at least 2
-                    # keys
-                    if keys_hbox.count() < 6:
-                        return
-
-                    # Remove the last key from the layout
-                    last_key = keys_hbox.takeAt(keys_hbox.count()-4)
-                    keys_hbox.removeItem(last_key)
-                    last_key_widget = last_key.widget()
-                    last_key_widget.deleteLater()
-
-                    # Reflect the changes made in
-                    # the box_keycodes dict
-                    box_keycodes[key_string][j].pop(-1)
-                    update_dict_from_options()
-
-
-                # Add buttons at the right
-                add_button = QPushButton("+")
-                add_button.clicked.connect(add_key)
-                keys_hbox.addWidget(add_button)
-
-                remove_button = QPushButton("-")
-                remove_button.clicked.connect(remove_key)
-                keys_hbox.addWidget(remove_button)
-
+                keys_hbox = RemapperHBox(j, state, remap_sl, box_keycodes)
                 actions_vbox.addLayout(keys_hbox)
 
         keys_menu.currentIndexChanged.connect(
