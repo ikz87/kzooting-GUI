@@ -281,7 +281,7 @@ class RemapperHBox(QHBoxLayout):
             curr_vbox = remap_sl.widget(curr_key).layout()
             for j in range(curr_vbox.count()):
                 # Get hbox
-                curr_hbox = actions_vbox.itemAt(j).layout()
+                curr_hbox = curr_vbox.itemAt(j).layout()
 
                 # Get the keycode count. That is:
                 # total widgets - label, stretch, buttons (4)
@@ -336,7 +336,7 @@ class RemapperHBox(QHBoxLayout):
 
             # Reflect the changes made in
             # the box_keycodes dict
-            box_keycodes[key_string][j].append(4)
+            box_keycodes[state.selected_key][j].append(4)
 
         def remove_key():
             # Only remove if there is at least 2
@@ -352,7 +352,7 @@ class RemapperHBox(QHBoxLayout):
 
             # Reflect the changes made in
             # the box_keycodes dict
-            box_keycodes[key_string][j].pop(-1)
+            box_keycodes[state.selected_key][j].pop(-1)
             update_dict_from_options()
 
 
