@@ -1,3 +1,5 @@
+#!/bin/python3
+
 import kzserial
 import sys
 import serial
