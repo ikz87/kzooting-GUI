@@ -85,6 +85,7 @@ class GeneralInfo(QWidget):
             "Internal temperature: 0.00°C\n"
             "Reports per second: 000 (0.00ms)\n"
         )
+        info_strings.setFixedWidth(300)
 
         state.attach_listener(
             "info", lambda info:
@@ -94,7 +95,7 @@ class GeneralInfo(QWidget):
 
         # Populate grid
         general_info_grid = QGridLayout()
-        general_info_grid.addWidget(ports_menu, 0, 0)
+        general_info_grid.addWidget(ports_menu, 0, 0 , 1, 2)
         general_info_grid.addWidget(info_strings, 1, 0)
         self.setLayout(general_info_grid)
 
@@ -571,7 +572,7 @@ class MainWindow(QMainWindow):
         # Lower side
         save_button = QPushButton("&Save", self)
         save_button.setStyleSheet(
-            "QPushButton {padding: 5 0 8 0;}"
+            "QPushButton {padding: 5 0 8 0; margin: 0 0 5 0;}"
             "QPushButton:pressed {padding: 7 0 5 0;background-color: #B2CFFF;color: #1B203C;}"
         )
         save_button.clicked.connect(self.send_configs_to_pico)
@@ -581,8 +582,9 @@ class MainWindow(QMainWindow):
         kz_label = QLabel()
         kz_label.setStyleSheet(
             "border: 2px solid #B2CFFF;"
+            "margin: 0 0 5 5;"
         )
-        kz_label.setFixedWidth(36)
+        kz_label.setFixedWidth(41)
         kz_label.setPixmap(kz_icon)
 
         degen_icon = QPixmap("../assets/degen_icon.png").scaled(32,32,
@@ -591,8 +593,9 @@ class MainWindow(QMainWindow):
         degen_label = QLabel()
         degen_label.setStyleSheet(
             "border: 2px solid #B2CFFF;"
+            "margin: 0 5 5 0;"
         )
-        degen_label.setFixedWidth(36)
+        degen_label.setFixedWidth(41)
         degen_label.setPixmap(degen_icon)
 
         lower_side = QHBoxLayout()
