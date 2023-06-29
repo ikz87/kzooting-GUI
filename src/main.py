@@ -4,6 +4,7 @@ import serial
 import time
 import inotify.adapters
 import json
+import keycodes
 import collections
 from PyQt5.QtGui import *
 from PyQt5.QtWidgets import *
@@ -162,7 +163,7 @@ class GeneralConfigs(QWidget):
         actuation_point = QDoubleSpinBox()
         actuation_point.setSuffix("mm")
         actuation_point.setDecimals(2)
-        actuation_point.setRange(0.3, 3.5)
+        actuation_point.setRange(0.5, 3.5)
         actuation_point.setSingleStep(0.05)
         actuation_point_label = QLabel()
         actuation_point_label.setText("Actuation point")
@@ -171,7 +172,7 @@ class GeneralConfigs(QWidget):
         actuation_reset = QDoubleSpinBox()
         actuation_reset.setSuffix("mm")
         actuation_reset.setDecimals(2)
-        actuation_reset.setRange(0.1, 1)
+        actuation_reset.setRange(0.1, 0.3)
         actuation_reset.setSingleStep(0.05)
         actuation_reset_label = QLabel()
         actuation_reset_label.setText("Actuation reset")
@@ -212,7 +213,7 @@ class GeneralConfigs(QWidget):
                 fixed_actuation_rb.setChecked(True)
                 sub_options.setCurrentWidget(fa_options)
 
-        def update_dict_from_options(_configs):
+        def update_dict_from_options():
             state.out_configs["general"]["rapid_trigger"] = rapid_trigger_rb.isChecked()
             state.out_configs["general"]["sensitivity"] = sensitivity.value()
             state.out_configs["general"]["top_deadzone"] = top_deadzone.value()
@@ -235,6 +236,25 @@ class GeneralConfigs(QWidget):
         state.attach_listener(
             "in_configs", update_options_from_dict)
 
+class RemapperComboBox(QComboBox):
+    """
+    The QComboBoxes shown in the remapper
+    selection
+    """
+
+    def __init__(self, keycode):
+        super(RemapperComboBox, self).__init__()
+
+        for key_string in keycodes.values:
+            self.addItem(key_string)
+        self.setCurrentText(keycodes.strings[keycode])
+        #self.setEditable(True)
+        #self.lineEdit().setReadOnly(True)
+        #self.lineEdit().setAlignment(Qt.AlignmentFlag.AlignHCenter)
+        self.setStyleSheet(
+            "QComboBox{max-width: 200px; min-width: 20px;}"
+        )
+
 
 class KeyConfigs(QWidget):
     """
@@ -243,22 +263,168 @@ class KeyConfigs(QWidget):
 
     def __init__(self, state):
         super(KeyConfigs, self).__init__()
+        state.selected_key = "key_1"
 
         # Set up dropdown menu for keys
         keys_menu = QComboBox()
-
-        keys_menu.currentIndexChanged.connect(
-            lambda value: state.setter("key_selected")(f"key_{value + 1}")
+        keys_menu.setStyleSheet(
+            "QComboBox {margin-bottom: 15px;}"
         )
 
+
         for i in range(9):
+            state.out_configs[f"key_{i+1}"] = {}
             keys_menu.addItem(f"key_{i+1}")
+
+        # Remapper
+        box_keycodes = {"key_1": [[4]]}
+        remap_sl = QStackedWidget()
+        for i in range(9):
+            remap_gb = QGroupBox(f"Key_{i+1} actions:")
+            remap_gb.setLayout(QVBoxLayout())
+            remap_sl.addWidget(remap_gb)
+
 
         # Populate grid
         key_configs_grid = QGridLayout()
         key_configs_grid.addWidget(keys_menu, 0, 0)
-        key_configs_grid.addWidget(QLabel(), 1, 0)
+        key_configs_grid.addWidget(remap_sl, 1, 0)
         self.setLayout(key_configs_grid)
+
+        def update_keycodes(configs):
+            # This function wouldn't be here if 
+            # the keycodes were the value held by 
+            # "key_id" keys, but I chose to put them
+            # inside another key called "actions" in case
+            # I ever wanna add per key configurations
+            state.out_configs = configs
+            for i in range(9):
+                actions = configs[f"key_{i+1}"]["actions"]
+                box_keycodes[f"key_{i+1}"] = actions
+
+            update_options_from_key(int(state.selected_key[-1])-1)
+
+
+
+        def empty_layout(layout):
+            to_delete = layout.takeAt(layout.count() - 1)
+            if to_delete is not None:
+                while to_delete.count():
+                    item = to_delete.takeAt(0)
+                    widget = item.widget()
+                    if widget is not None:
+                        widget.deleteLater()
+            else:
+                pass
+
+        def update_options_from_key(key_index):
+            key_string = f"key_{key_index+1}"
+            state.setter("selected_key")(key_string)
+            remap_sl.setCurrentIndex(key_index)
+            group_box = remap_sl.currentWidget()
+            actions_vbox = group_box.layout()
+            current_combo_boxes = box_keycodes[key_string]
+
+            # First we delete all previous widgets
+            empty_layout(actions_vbox)
+
+            # Then we populate the grid again
+            for j in range(len(current_combo_boxes)):
+                keys_hbox = QHBoxLayout()
+
+                # Add label at the left
+                number_label = QLabel(f"{j+1}:")
+                number_label.setStyleSheet(
+                    "background-color: #1B203C;"
+                )
+                keys_hbox.addWidget(number_label)
+
+                def update_dict_from_options():
+                    curr_key = int(state.selected_key[-1])-1
+                    curr_vbox = remap_sl.widget(curr_key).layout()
+                    for j in range(curr_vbox.count()):
+                        curr_hbox = actions_vbox.itemAt(j).layout()
+                        keycode_count = curr_hbox.count()-4
+                        print(keycode_count, len(state.out_configs[state.selected_key]["actions"][j]))
+                        while keycode_count < len(state.out_configs[state.selected_key]["actions"][j]):
+                            state.out_configs[state.selected_key]["actions"][j].pop(-1)
+                        print(keycode_count, len(state.out_configs[state.selected_key]["actions"][j]))
+                        for k in range(keycode_count):
+                            curr_combo_box = curr_hbox.itemAt(k+1).widget()
+                            print(f"{curr_key}, {j}, {k} keycode for key_{curr_key} is {curr_combo_box.currentText()}")
+                            if k < len(state.out_configs[state.selected_key]["actions"][j]):
+                                state.out_configs[state.selected_key]["actions"][j][k] = keycodes.values[curr_combo_box.currentText()]
+                            else:
+                                state.out_configs[state.selected_key]["actions"][j].append(keycodes.values[curr_combo_box.currentText()])
+
+
+                    print(state.out_configs)
+
+
+                # Add all combo boxes from the dict
+                for k in range(len(current_combo_boxes[j])):
+                    new_remapper = RemapperComboBox(current_combo_boxes[j][k])
+                    keys_hbox.addWidget(new_remapper)
+                    new_remapper.currentTextChanged.connect(update_dict_from_options)
+
+                keys_hbox.addStretch()
+
+
+                def add_key():
+                    add_button_item = keys_hbox.takeAt(keys_hbox.count()-1)
+                    remove_button_item = keys_hbox.takeAt(keys_hbox.count()-1)
+                    stretch_item = keys_hbox.takeAt(keys_hbox.count()-1)
+
+                    # Remove buttons and stretch from layout
+                    keys_hbox.removeItem(add_button_item)
+                    keys_hbox.removeItem(remove_button_item)
+                    keys_hbox.removeItem(stretch_item)
+
+                    # Add the new RemapperComboBox
+                    new_remapper = RemapperComboBox(4)
+                    keys_hbox.addWidget(new_remapper)
+                    new_remapper.currentTextChanged.connect(update_dict_from_options)
+
+                    # Add buttons and stretch again
+                    keys_hbox.addItem(stretch_item)
+                    keys_hbox.addItem(remove_button_item)
+                    keys_hbox.addItem(add_button_item)
+
+                    # Reflect the changes made in
+                    # the box_keycodes dict
+                    box_keycodes[key_string][j].append(4)
+
+                def remove_key():
+                    # Remove the last key from the layout
+                    last_key = keys_hbox.takeAt(keys_hbox.count()-4)
+                    keys_hbox.removeItem(last_key)
+                    last_key_widget = last_key.widget()
+                    last_key_widget.deleteLater()
+
+                    # Reflect the changes made in
+                    # the box_keycodes dict
+                    box_keycodes[key_string][j].pop(-1)
+                    update_dict_from_options()
+
+
+                # Add buttons at the right
+                add_button = QPushButton("+")
+                add_button.clicked.connect(add_key)
+                keys_hbox.addWidget(add_button)
+
+                remove_button = QPushButton("-")
+                remove_button.clicked.connect(remove_key)
+                keys_hbox.addWidget(remove_button)
+
+                actions_vbox.addLayout(keys_hbox)
+
+        keys_menu.currentIndexChanged.connect(
+            update_options_from_key
+        )
+
+        state.attach_listener(
+            "in_configs", update_keycodes)
+
 
 
 class Visualizer(QWidget):
@@ -290,16 +456,17 @@ class Visualizer(QWidget):
         # Set up switch icon
         # The switch is divided in 3 to create an
         # up and down motion
-        switch_top = QPixmap("../assets/switch_top.png").scaledToWidth(130)
+        switch_top = QPixmap("../assets/switch_top.png").scaledToWidth(100)
         switch_top_label = QLabel()
         switch_top_label.setPixmap(switch_top)
 
-        switch_mid = QPixmap("../assets/switch_mid.png").scaledToWidth(130)
+        switch_mid = QPixmap("../assets/switch_mid.png").scaledToWidth(100)
         switch_mid_label = QLabel()
         switch_mid_label.setPixmap(switch_mid)
-        switch_mid_label.setFixedHeight(50)
+        switch_mid_height = 25
+        switch_mid_label.setFixedHeight(switch_mid_height)
 
-        switch_bottom = QPixmap("../assets/switch_bottom.png").scaledToWidth(130)
+        switch_bottom = QPixmap("../assets/switch_bottom.png").scaledToWidth(100)
         switch_bottom_label = QLabel()
         switch_bottom_label.setPixmap(switch_bottom)
         switch_bottom_label.setStyleSheet(
@@ -313,19 +480,21 @@ class Visualizer(QWidget):
         switch_vbox.addWidget(switch_bottom_label)
 
         # Populate grid
-        grid = QGridLayout()
-        grid.addLayout(bar_vbox, 0, 0)
-        grid.addLayout(switch_vbox, 0, 1)
-        self.setLayout(grid)
+        hbox = QHBoxLayout()
+        hbox.addStretch()
+        hbox.addLayout(bar_vbox)
+        hbox.addLayout(switch_vbox)
+        self.setLayout(hbox)
+        hbox.addStretch()
 
         def update_bar_contents(info):
-            distance = info[state.key_selected]["distance"]
+            distance = info[state.selected_key]["distance"]
             bar.setValue(round(distance * 100))
             bar_label.setText("{:.1f}".format(distance) + "mm" )
-            switch_mid_label.setFixedHeight(round(50-50*distance/4))
+            switch_mid_label.setFixedHeight(round(switch_mid_height-switch_mid_height*distance/4))
 
             # Update color
-            if info[state.key_selected]["state"]:
+            if info[state.selected_key]["state"]:
                 bar.setStyleSheet(
                     "QProgressBar::chunk{background-color: #B2CFFF}")
             else:
@@ -368,6 +537,10 @@ class MainWindow(QMainWindow):
 
         # Lower side
         save_button = QPushButton("&Save", self)
+        save_button.setStyleSheet(
+            "QPushButton {padding: 5 0 8 0;}"
+            "QPushButton:pressed {padding: 7 0 5 0;background-color: #B2CFFF;color: #1B203C;}"
+        )
         save_button.clicked.connect(self.send_configs_to_pico)
         kz_icon = QPixmap("../assets/kz_icon.jpeg").scaled(32,32)
         kz_label = QLabel()
@@ -390,11 +563,19 @@ class MainWindow(QMainWindow):
         lower_side.addWidget(save_button)
         lower_side.addWidget(degen_label)
 
+        # Left side
+        left_side = QVBoxLayout()
+        left_side.addWidget(general_info)
+        left_side.addWidget(general_configs)
+
+        # Right side
+        right_side = QVBoxLayout()
+        right_side.addWidget(key_configs)
+        right_side.addWidget(visualizer)
+
         # Populate grid
-        self.root_grid.addWidget(general_info, 0, 0)
-        self.root_grid.addWidget(general_configs, 1, 0)
-        self.root_grid.addWidget(key_configs, 0, 1)
-        self.root_grid.addWidget(visualizer, 1, 1)
+        self.root_grid.addLayout(left_side, 0, 0)
+        self.root_grid.addLayout(right_side, 0, 1)
         self.root_grid.addLayout(lower_side, 2, 0, 1, 2)
 
         # Watch for changes in ports directory
@@ -433,8 +614,9 @@ class MainWindow(QMainWindow):
         """
         try:
             # Temp code until key configs are also updated
-            configs_dict = self.state.in_configs
-            configs_dict["general"] = self.state.out_configs["general"]
+            #configs_dict = self.state.in_configs
+            configs_dict = self.state.out_configs
+            print(configs_dict)
             configs_json = json.dumps(configs_dict)
             self.rpp.write((configs_json + "\n").encode())
         except:
