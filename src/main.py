@@ -252,7 +252,7 @@ class RemapperComboBox(QComboBox):
         #self.lineEdit().setReadOnly(True)
         #self.lineEdit().setAlignment(Qt.AlignmentFlag.AlignHCenter)
         self.setStyleSheet(
-            "QComboBox{max-width: 250px; min-width: 20px;}"
+            "QComboBox{max-width: 180px; min-width: 20px;}"
         )
 
 
@@ -307,15 +307,18 @@ class KeyConfigs(QWidget):
 
 
         def empty_layout(layout):
-            to_delete = layout.takeAt(layout.count() - 1)
-            if to_delete is not None:
-                while to_delete.count():
-                    item = to_delete.takeAt(0)
-                    widget = item.widget()
-                    if widget is not None:
-                        widget.deleteLater()
-            else:
-                pass
+            # Empties a layout recursively
+            while(layout.count()):
+                to_delete = layout.itemAt(0)
+                if to_delete is not None:
+                    child_layout = to_delete.layout()
+                    if child_layout is not None:
+                        empty_layout(child_layout)
+                    child_widget = to_delete.widget()
+                    if child_widget is not None:
+                        child_widget.deleteLater()
+                    layout.removeItem(to_delete)
+
 
         def update_options_from_key(key_index):
             key_string = f"key_{key_index+1}"
