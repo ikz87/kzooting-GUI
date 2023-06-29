@@ -252,7 +252,7 @@ class RemapperComboBox(QComboBox):
         #self.lineEdit().setReadOnly(True)
         #self.lineEdit().setAlignment(Qt.AlignmentFlag.AlignHCenter)
         self.setStyleSheet(
-            "QComboBox{max-width: 200px; min-width: 20px;}"
+            "QComboBox{max-width: 250px; min-width: 20px;}"
         )
 
 
@@ -395,6 +395,11 @@ class KeyConfigs(QWidget):
                     box_keycodes[key_string][j].append(4)
 
                 def remove_key():
+                    # Only remove if there is at least 2
+                    # keys
+                    if keys_hbox.count() < 6:
+                        return
+
                     # Remove the last key from the layout
                     last_key = keys_hbox.takeAt(keys_hbox.count()-4)
                     keys_hbox.removeItem(last_key)
