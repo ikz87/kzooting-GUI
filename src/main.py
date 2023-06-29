@@ -489,17 +489,17 @@ class Visualizer(QWidget):
         # Set up switch icon
         # The switch is divided in 3 to create an
         # up and down motion
-        switch_top = QPixmap("../assets/switch_top.png").scaledToWidth(100)
+        switch_top = QPixmap("../assets/switch_top.png").scaledToWidth(100, Qt.SmoothTransformation)
         switch_top_label = QLabel()
         switch_top_label.setPixmap(switch_top)
 
-        switch_mid = QPixmap("../assets/switch_mid.png").scaledToWidth(100)
+        switch_mid = QPixmap("../assets/switch_mid.png").scaledToWidth(100, Qt.SmoothTransformation)
         switch_mid_label = QLabel()
         switch_mid_label.setPixmap(switch_mid)
         switch_mid_height = 25
         switch_mid_label.setFixedHeight(switch_mid_height)
 
-        switch_bottom = QPixmap("../assets/switch_bottom.png").scaledToWidth(100)
+        switch_bottom = QPixmap("../assets/switch_bottom.png").scaledToWidth(100, Qt.SmoothTransformation)
         switch_bottom_label = QLabel()
         switch_bottom_label.setPixmap(switch_bottom)
         switch_bottom_label.setStyleSheet(
@@ -575,7 +575,9 @@ class MainWindow(QMainWindow):
             "QPushButton:pressed {padding: 7 0 5 0;background-color: #B2CFFF;color: #1B203C;}"
         )
         save_button.clicked.connect(self.send_configs_to_pico)
-        kz_icon = QPixmap("../assets/kz_icon.jpeg").scaled(32,32)
+        kz_icon = QPixmap("../assets/kz_icon.jpeg").scaled(32,32,
+                                                           Qt.IgnoreAspectRatio,
+                                                           Qt.SmoothTransformation)
         kz_label = QLabel()
         kz_label.setStyleSheet(
             "border: 2px solid #B2CFFF;"
@@ -583,7 +585,9 @@ class MainWindow(QMainWindow):
         kz_label.setFixedWidth(36)
         kz_label.setPixmap(kz_icon)
 
-        degen_icon = QPixmap("../assets/degen_icon.png").scaled(32,32)
+        degen_icon = QPixmap("../assets/degen_icon.png").scaled(32,32,
+                                                                Qt.IgnoreAspectRatio,
+                                                                Qt.SmoothTransformation)
         degen_label = QLabel()
         degen_label.setStyleSheet(
             "border: 2px solid #B2CFFF;"
