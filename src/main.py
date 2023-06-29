@@ -684,6 +684,7 @@ class MainWindow(QMainWindow):
 def main():
     app = QApplication(sys.argv)
     main_window = MainWindow()
+    main_window.setWindowTitle("kzooting - GUI")
     main_window.show()
     sys.exit(app.exec())
 
