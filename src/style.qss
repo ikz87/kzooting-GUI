@@ -1,28 +1,28 @@
 * {
-    background-color: #0C0E1A;
+    background-color: #0f0f0e;
     color: #F9FCFF;
     font-family: CartographCF;
     font-size: 15px;
 }
 
 QComboBox, QListView, QPushButton, QGroupBox, QProgressBar {
-    background-color: #1B203C;
-    border: 2px solid #B2CFFF;
+    background-color: #282826;
+    border: 2px solid #89bd40;
 }
 
 QComboBox {
     padding: 2 0 4 8;
-    selection-background-color: #B2CFFF;
-    selection-color: #1B203C;
+    selection-background-color: #89bd40;
+    selection-color: #282826;
 }
 
 QComboBox:on {
     padding: 4 0 2 0;
-    background-color: #B2CFFF;
+    background-color: #89bd40;
 }
 
 QComboBox:drop-down {
-    background-color: #1B203C;
+    background-color: #282826;
 }
 
 QGroupBox {
@@ -34,8 +34,8 @@ QGroupBox::title {
     subcontrol-origin: margin;
     subcontrol-position: top left;
     padding: 0 0 2 0;
-    background-color: #1B203C;
-    border: 2px solid #B2CFFF;
+    background-color: #282826;
+    border: 2px solid #89bd40;
 }
 
 QLabel[text="Sensitivity"], 
@@ -45,49 +45,50 @@ QLabel[text="Bottom deadzone"],
 QLabel[text="Actuation point"], 
 QLabel[text="Actuation reset"],
 QRadioButton {
-    background-color: #1B203C;
+    background-color: #282826;
 }
 
 QRadioButton::indicator {
-    border: 2px solid #B2CFFF;
+    border: 2px solid #89bd40;
     border-radius: 7px;
 }
 
 QRadioButton::indicator:unchecked {
-    background-color: #0C0E1A;
+    background-color: #0f0f0e;
 }
 
 QRadioButton::indicator:checked {
-    background-color: #B2CFFF;
+    background-color: #89bd40;
 }
     
 QPushButton {
-    padding: 3 4 5 5;
+    padding: 3 9 5 9;
 }
 
 
 QPushButton:pressed {
-    padding: 5 0 3 0;
-    background-color: #B2CFFF;
-    color: #1B203C;
+    padding: 7 0 1 0;
+    background-color: #89bd40;
+    color: #282826;
 }
 
 QDoubleSpinBox {
-    border: 2px solid #B2CFFF;
+    border: 2px solid #89bd40;
     margin: 0 0 10 0;
 }
 
 QDoubleSpinBox::up-button, QDoubleSpinBox::down-button {
-    background-color: #1B203C;
+    background-color: #282826;
     height: 0;
 }
 
 QProgressBar {
     margin: 0 0 15 0;
     width: 40px;
+    height: 180px;
 }
     
 QProgressBar::chunk {
-    background-color: #C4BCCA;
+    background-color: #8E735D;
     height: 1px;
 }
