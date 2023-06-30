@@ -346,8 +346,8 @@ class RemapperHBox(QHBoxLayout):
 
             # Add buttons and stretch again
             self.addItem(stretch_item)
-            self.addItem(remove_button_item)
             self.addItem(add_button_item)
+            self.addItem(remove_button_item)
 
             # Reflect the changes made in
             # the box_keycodes dict
@@ -373,13 +373,13 @@ class RemapperHBox(QHBoxLayout):
 
 
         # Add buttons at the right
-        add_button = QPushButton("+")
-        add_button.clicked.connect(add_key)
-        self.addWidget(add_button)
-
         remove_button = QPushButton("-")
         remove_button.clicked.connect(remove_key)
         self.addWidget(remove_button)
+
+        add_button = QPushButton("+")
+        add_button.clicked.connect(add_key)
+        self.addWidget(add_button)
 
 
 class KeyConfigs(QWidget):
