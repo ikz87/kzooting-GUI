@@ -14,6 +14,7 @@ from PyQt5.QtCore import Qt, pyqtSignal, QObject, QTimer
 
 PROGRAM_DIR = os.path.dirname(os.path.abspath(sys.argv[0]))
 
+
 class State(QObject):
     """
     Implementation of the Observer Pattern to control application
@@ -83,20 +84,21 @@ class GeneralInfo(QWidget):
         # Set up info strings
         info_strings = QLabel()
         info_strings.setText(
-            "Internal temperature: 0.00°C\n"
-            "Reports per second: 000 (0.00ms)\n"
+            "Internal temperature: 0.00°C\n" "Reports per second: 000 (0.00ms)\n"
         )
         info_strings.setFixedWidth(300)
 
         state.attach_listener(
-            "info", lambda info:
-                info_strings.setText(
-                    f"Internal temperature: {info['temperature']:.1f}°C\n"
-                    f"Reports per second: {1000/info['report_time']:.0f} ({info['report_time']:.2f}ms)"))
+            "info",
+            lambda info: info_strings.setText(
+                f"Internal temperature: {info['temperature']:.1f}°C\n"
+                f"Reports per second: {1000/info['report_time']:.0f} ({info['report_time']:.2f}ms)"
+            ),
+        )
 
         # Populate grid
         general_info_grid = QGridLayout()
-        general_info_grid.addWidget(ports_menu, 0, 0 , 1, 2)
+        general_info_grid.addWidget(ports_menu, 0, 0, 1, 2)
         general_info_grid.addWidget(info_strings, 1, 0)
         self.setLayout(general_info_grid)
 
@@ -105,6 +107,7 @@ class GeneralConfigs(QWidget):
     """
     Bottom left quadrant of the window
     """
+
     def __init__(self, state):
         super(GeneralConfigs, self).__init__()
         self.state = state
@@ -237,8 +240,8 @@ class GeneralConfigs(QWidget):
         bottom_deadzone.valueChanged.connect(update_dict_from_options)
         actuation_point.valueChanged.connect(update_dict_from_options)
         actuation_reset.valueChanged.connect(update_dict_from_options)
-        state.attach_listener(
-            "in_configs", update_options_from_dict)
+        state.attach_listener("in_configs", update_options_from_dict)
+
 
 class RemapperComboBox(QComboBox):
     """
@@ -253,13 +256,11 @@ class RemapperComboBox(QComboBox):
             self.addItem(key_string)
         self.setCurrentText(keycodes.strings[keycode])
         self.view().setMinimumWidth(170)
-        self.setStyleSheet(
-            "QComboBox{width: 40px;}"
-        )
+        self.setStyleSheet("QComboBox{width: 40px;}")
         # Alignment
-        #self.setEditable(True)
-        #self.lineEdit().setAlignment(Qt.AlignmentFlag.AlignHCenter)
-        #self.lineEdit().setReadOnly(True)
+        # self.setEditable(True)
+        # self.lineEdit().setAlignment(Qt.AlignmentFlag.AlignHCenter)
+        # self.lineEdit().setReadOnly(True)
 
 
 class RemapperHBox(QHBoxLayout):
@@ -267,35 +268,34 @@ class RemapperHBox(QHBoxLayout):
     The QHBoxLayout containing all keys
     of an action
     """
+
     def __init__(self, j, state, remap_sl, box_keycodes):
         super(RemapperHBox, self).__init__()
 
         current_combo_boxes = box_keycodes[state.selected_key]
         # Add label at the left
         number_label = QLabel(f"{j+1}:")
-        number_label.setStyleSheet(
-            "background-color: #1B203C;"
-        )
+        number_label.setStyleSheet("background-color: #1B203C;")
         self.addWidget(number_label)
 
         def update_dict_from_options():
-            # Updates the out configs according to 
+            # Updates the out configs according to
             # the RemapperComboBoxes
-            curr_key = int(state.selected_key[-1])-1
+            curr_key = int(state.selected_key[-1]) - 1
 
             # Get vbox
             curr_vbox = remap_sl.widget(curr_key).layout()
 
             # Get actions count, that is:
             # total items - stretch, buttons hbox (2)
-            actions_count = curr_vbox.count()-2
+            actions_count = curr_vbox.count() - 2
             for j in range(actions_count):
                 # Get hbox
                 curr_hbox = curr_vbox.itemAt(j).layout()
 
                 # Get the keycode count. That is:
                 # total items - label, stretch, buttons (4)
-                keycode_count = curr_hbox.count()-4
+                keycode_count = curr_hbox.count() - 4
 
                 # If there are less keycodes now, delete the old
                 # remaining ones from the dict
@@ -306,7 +306,7 @@ class RemapperHBox(QHBoxLayout):
 
                 # Change the dict's keycodes
                 for k in range(keycode_count):
-                    curr_combo_box = curr_hbox.itemAt(k+1).widget()
+                    curr_combo_box = curr_hbox.itemAt(k + 1).widget()
                     curr_keycode = keycodes.values[curr_combo_box.currentText()]
                     # If an index is already there, just change the
                     # value
@@ -326,13 +326,12 @@ class RemapperHBox(QHBoxLayout):
 
         self.addStretch()
 
-
         def add_key():
             # Get items
             item_count = self.count()
-            add_button_item = self.takeAt(item_count-1)
-            remove_button_item = self.takeAt(item_count-2)
-            stretch_item = self.takeAt(item_count-3)
+            add_button_item = self.takeAt(item_count - 1)
+            remove_button_item = self.takeAt(item_count - 2)
+            stretch_item = self.takeAt(item_count - 3)
 
             # Remove buttons and stretch from layout
             self.removeItem(add_button_item)
@@ -361,7 +360,7 @@ class RemapperHBox(QHBoxLayout):
                 return
 
             # Remove the last key from the layout
-            last_key = self.takeAt(item_count-4)
+            last_key = self.takeAt(item_count - 4)
             self.removeItem(last_key)
             last_key_widget = last_key.widget()
             last_key_widget.deleteLater()
@@ -370,7 +369,6 @@ class RemapperHBox(QHBoxLayout):
             # the box_keycodes dict
             box_keycodes[state.selected_key][j].pop(-1)
             update_dict_from_options()
-
 
         # Add buttons at the right
         remove_button = QPushButton("-")
@@ -393,10 +391,7 @@ class KeyConfigs(QWidget):
 
         # Set up dropdown menu for keys
         keys_menu = QComboBox()
-        keys_menu.setStyleSheet(
-            "QComboBox {margin-bottom: 15px;}"
-        )
-
+        keys_menu.setStyleSheet("QComboBox {margin-bottom: 15px;}")
 
         for i in range(9):
             state.out_configs[f"key_{i+1}"] = {}
@@ -407,12 +402,9 @@ class KeyConfigs(QWidget):
         remap_sl = QStackedWidget()
         for i in range(9):
             remap_gb = QGroupBox(f"Key_{i+1} actions:")
-            remap_gb.setStyleSheet(
-                "QGroupBox {min-height: 250px;}"
-            )
+            remap_gb.setStyleSheet("QGroupBox {min-height: 250px;}")
             remap_gb.setLayout(QVBoxLayout())
             remap_sl.addWidget(remap_gb)
-
 
         # Populate grid
         key_configs_grid = QGridLayout()
@@ -421,8 +413,8 @@ class KeyConfigs(QWidget):
         self.setLayout(key_configs_grid)
 
         def update_keycodes(configs):
-            # This function wouldn't be here if 
-            # the keycodes were the value held by 
+            # This function wouldn't be here if
+            # the keycodes were the value held by
             # "key_id" keys, but I chose to put them
             # inside another key called "actions" in case
             # I ever wanna add per key configurations
@@ -431,11 +423,11 @@ class KeyConfigs(QWidget):
                 actions = configs[f"key_{i+1}"]["actions"]
                 box_keycodes[f"key_{i+1}"] = actions
 
-            update_options_from_key(int(state.selected_key[-1])-1)
+            update_options_from_key(int(state.selected_key[-1]) - 1)
 
         def empty_layout(layout):
             # Empties a layout recursively
-            while(layout.count()):
+            while layout.count():
                 to_delete = layout.itemAt(0)
                 if to_delete is not None:
                     child_layout = to_delete.layout()
@@ -445,7 +437,6 @@ class KeyConfigs(QWidget):
                     if child_widget is not None:
                         child_widget.deleteLater()
                     layout.removeItem(to_delete)
-
 
         def update_options_from_key(key_index):
             key_string = f"key_{key_index+1}"
@@ -470,21 +461,21 @@ class KeyConfigs(QWidget):
 
                 # Get items
                 item_count = actions_vbox.count()
-                buttons_item = actions_vbox.takeAt(item_count-1)
-                stretch_item = actions_vbox.takeAt(item_count-2)
+                buttons_item = actions_vbox.takeAt(item_count - 1)
+                stretch_item = actions_vbox.takeAt(item_count - 2)
 
                 # Remove buttons from layout
                 actions_vbox.removeItem(buttons_item)
                 actions_vbox.removeItem(stretch_item)
 
                 # Add the new RemapperHBox
-                actions_vbox.addLayout(RemapperHBox(item_count-2, state, remap_sl, box_keycodes))
+                actions_vbox.addLayout(
+                    RemapperHBox(item_count - 2, state, remap_sl, box_keycodes)
+                )
 
                 # Add buttons and stretch again
                 actions_vbox.addItem(stretch_item)
                 actions_vbox.addItem(buttons_item)
-
-
 
             def remove_action():
                 # Only remove if there are at least
@@ -494,7 +485,7 @@ class KeyConfigs(QWidget):
                     return
 
                 # Remove the last action from the layout
-                last_action = actions_vbox.takeAt(item_count-3)
+                last_action = actions_vbox.takeAt(item_count - 3)
                 last_action_layout = last_action.layout()
                 empty_layout(last_action_layout)
                 actions_vbox.removeItem(last_action)
@@ -513,14 +504,9 @@ class KeyConfigs(QWidget):
             buttons_hbox.addWidget(add_button)
             actions_vbox.addLayout(buttons_hbox)
 
+        keys_menu.currentIndexChanged.connect(update_options_from_key)
 
-        keys_menu.currentIndexChanged.connect(
-            update_options_from_key
-        )
-
-        state.attach_listener(
-            "in_configs", update_keycodes)
-
+        state.attach_listener("in_configs", update_keycodes)
 
 
 class Visualizer(QWidget):
@@ -539,9 +525,7 @@ class Visualizer(QWidget):
         bar.setMinimum(0)
         bar.setInvertedAppearance(True)
         bar_label = QLabel()
-        bar_label.setStyleSheet(
-            "font-size: 11px;"
-        )
+        bar_label.setStyleSheet("font-size: 11px;")
         bar_label.setText("0.0 mm")
         bar_label.setAlignment(Qt.AlignmentFlag.AlignCenter)
         bar_label.setBuddy(bar)
@@ -552,22 +536,26 @@ class Visualizer(QWidget):
         # Set up switch icon
         # The switch is divided in 3 to create an
         # up and down motion
-        switch_top = QPixmap(PROGRAM_DIR + "/../assets/switch_top.png").scaledToWidth(100, Qt.SmoothTransformation)
+        switch_top = QPixmap(PROGRAM_DIR + "/../assets/switch_top.png").scaledToWidth(
+            100, Qt.SmoothTransformation
+        )
         switch_top_label = QLabel()
         switch_top_label.setPixmap(switch_top)
 
-        switch_mid = QPixmap(PROGRAM_DIR + "/../assets/switch_mid.png").scaledToWidth(100, Qt.SmoothTransformation)
+        switch_mid = QPixmap(PROGRAM_DIR + "/../assets/switch_mid.png").scaledToWidth(
+            100, Qt.SmoothTransformation
+        )
         switch_mid_label = QLabel()
         switch_mid_label.setPixmap(switch_mid)
         switch_mid_height = 25
         switch_mid_label.setFixedHeight(switch_mid_height)
 
-        switch_bottom = QPixmap(PROGRAM_DIR + "/../assets/switch_bottom.png").scaledToWidth(100, Qt.SmoothTransformation)
+        switch_bottom = QPixmap(
+            PROGRAM_DIR + "/../assets/switch_bottom.png"
+        ).scaledToWidth(100, Qt.SmoothTransformation)
         switch_bottom_label = QLabel()
         switch_bottom_label.setPixmap(switch_bottom)
-        switch_bottom_label.setStyleSheet(
-            "padding: 0 0 12 0"
-        )
+        switch_bottom_label.setStyleSheet("padding: 0 0 12 0")
 
         switch_vbox = QVBoxLayout()
         switch_vbox.addStretch()
@@ -586,19 +574,18 @@ class Visualizer(QWidget):
         def update_bar_contents(info):
             distance = info[state.selected_key]["distance"]
             bar.setValue(round(distance * 100))
-            bar_label.setText("{:.1f}".format(distance) + "mm" )
-            switch_mid_label.setFixedHeight(round(switch_mid_height-switch_mid_height*distance/4))
+            bar_label.setText("{:.1f}".format(distance) + "mm")
+            switch_mid_label.setFixedHeight(
+                round(switch_mid_height - switch_mid_height * distance / 4)
+            )
 
             # Update color
             if info[state.selected_key]["state"]:
-                bar.setStyleSheet(
-                    "QProgressBar::chunk{background-color: #B2CFFF}")
+                bar.setStyleSheet("QProgressBar::chunk{background-color: #B2CFFF}")
             else:
-                bar.setStyleSheet(
-                    "QProgressBar::chunk{background-color: #555555}")
+                bar.setStyleSheet("QProgressBar::chunk{background-color: #555555}")
 
-        state.attach_listener(
-            "info", update_bar_contents)
+        state.attach_listener("info", update_bar_contents)
 
 
 class MainWindow(QMainWindow):
@@ -635,25 +622,19 @@ class MainWindow(QMainWindow):
             "QPushButton:pressed {padding: 7 0 5 0;background-color: #B2CFFF;color: #1B203C;}"
         )
         save_button.clicked.connect(self.send_configs_to_pico)
-        kz_icon = QPixmap(PROGRAM_DIR + "/../assets/kz_icon.jpeg").scaled(32,32,
-                                                           Qt.IgnoreAspectRatio,
-                                                           Qt.SmoothTransformation)
-        kz_label = QLabel()
-        kz_label.setStyleSheet(
-            "border: 2px solid #B2CFFF;"
-            "margin: 0 0 5 5;"
+        kz_icon = QPixmap(PROGRAM_DIR + "/../assets/kz_icon.jpeg").scaled(
+            32, 32, Qt.IgnoreAspectRatio, Qt.SmoothTransformation
         )
+        kz_label = QLabel()
+        kz_label.setStyleSheet("border: 2px solid #B2CFFF;" "margin: 0 0 5 5;")
         kz_label.setFixedWidth(41)
         kz_label.setPixmap(kz_icon)
 
-        degen_icon = QPixmap(PROGRAM_DIR + "/../assets/degen_icon.png").scaled(32,32,
-                                                                Qt.IgnoreAspectRatio,
-                                                                Qt.SmoothTransformation)
-        degen_label = QLabel()
-        degen_label.setStyleSheet(
-            "border: 2px solid #B2CFFF;"
-            "margin: 0 5 5 0;"
+        degen_icon = QPixmap(PROGRAM_DIR + "/../assets/degen_icon.png").scaled(
+            32, 32, Qt.IgnoreAspectRatio, Qt.SmoothTransformation
         )
+        degen_label = QLabel()
+        degen_label.setStyleSheet("border: 2px solid #B2CFFF;" "margin: 0 5 5 0;")
         degen_label.setFixedWidth(41)
         degen_label.setPixmap(degen_icon)
 
@@ -694,9 +675,7 @@ class MainWindow(QMainWindow):
                     if "IN_CLOSE_NOWRITE" in event_types or "IN_DELETE" in event_types:
                         self.state.available_ports = kzserial.get_serial_ports()
 
-        state.attach_listener(
-            "selected_port", lambda port: self.update_open_port(port)
-        )
+        state.attach_listener("selected_port", lambda port: self.update_open_port(port))
 
         self.state.available_ports = kzserial.get_serial_ports()
         timer1 = QTimer(self)
@@ -713,7 +692,7 @@ class MainWindow(QMainWindow):
         """
         try:
             # Temp code until key configs are also updated
-            #configs_dict = self.state.in_configs
+            # configs_dict = self.state.in_configs
             configs_dict = self.state.out_configs
             configs_json = json.dumps(configs_dict)
             self.rpp.write((configs_json + "\n").encode())
