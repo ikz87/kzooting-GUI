@@ -275,7 +275,7 @@ class RemapperHBox(QHBoxLayout):
         current_combo_boxes = box_keycodes[state.selected_key]
         # Add label at the left
         number_label = QLabel(f"{j+1}:")
-        number_label.setStyleSheet("background-color: #1B203C;")
+        number_label.setStyleSheet("background-color: #282826;")
         self.addWidget(number_label)
 
         def update_dict_from_options():
@@ -345,8 +345,8 @@ class RemapperHBox(QHBoxLayout):
 
             # Add buttons and stretch again
             self.addItem(stretch_item)
-            self.addItem(add_button_item)
             self.addItem(remove_button_item)
+            self.addItem(add_button_item)
 
             # Reflect the changes made in
             # the box_keycodes dict
@@ -581,7 +581,7 @@ class Visualizer(QWidget):
 
             # Update color
             if info[state.selected_key]["state"]:
-                bar.setStyleSheet("QProgressBar::chunk{background-color: #B2CFFF}")
+                bar.setStyleSheet("QProgressBar::chunk{background-color: #89bd40}")
             else:
                 bar.setStyleSheet("QProgressBar::chunk{background-color: #555555}")
 
@@ -619,14 +619,14 @@ class MainWindow(QMainWindow):
         save_button = QPushButton("&Save", self)
         save_button.setStyleSheet(
             "QPushButton {padding: 5 0 8 0; margin: 0 0 5 0;}"
-            "QPushButton:pressed {padding: 7 0 5 0;background-color: #B2CFFF;color: #1B203C;}"
+            "QPushButton:pressed {padding: 7 0 5 0;background-color: #89bd40;color: #282826;}"
         )
         save_button.clicked.connect(self.send_configs_to_pico)
         kz_icon = QPixmap(PROGRAM_DIR + "/../assets/kz_icon.jpeg").scaled(
             32, 32, Qt.IgnoreAspectRatio, Qt.SmoothTransformation
         )
         kz_label = QLabel()
-        kz_label.setStyleSheet("border: 2px solid #B2CFFF;" "margin: 0 0 5 5;")
+        kz_label.setStyleSheet("border: 2px solid #89bd40;" "margin: 0 0 5 5;")
         kz_label.setFixedWidth(41)
         kz_label.setPixmap(kz_icon)
 
@@ -634,7 +634,7 @@ class MainWindow(QMainWindow):
             32, 32, Qt.IgnoreAspectRatio, Qt.SmoothTransformation
         )
         degen_label = QLabel()
-        degen_label.setStyleSheet("border: 2px solid #B2CFFF;" "margin: 0 5 5 0;")
+        degen_label.setStyleSheet("border: 2px solid #89bd40;" "margin: 0 5 5 0;")
         degen_label.setFixedWidth(41)
         degen_label.setPixmap(degen_icon)
 
