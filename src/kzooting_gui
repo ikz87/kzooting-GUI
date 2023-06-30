@@ -566,7 +566,7 @@ class Visualizer(QWidget):
         switch_bottom_label = QLabel()
         switch_bottom_label.setPixmap(switch_bottom)
         switch_bottom_label.setStyleSheet(
-            "padding: 0 0 15 0"
+            "padding: 0 0 12 0"
         )
 
         switch_vbox = QVBoxLayout()
