@@ -618,7 +618,7 @@ class MainWindow(QMainWindow):
         # Lower side
         save_button = QPushButton("&Save", self)
         save_button.setStyleSheet(
-            "QPushButton {padding: 5 0 8 0; margin: 0 0 5 0;}"
+            "QPushButton {padding: 5 0 8 0; margin: 0 0 9 0;}"
             "QPushButton:pressed {padding: 7 0 5 0;background-color: #89bd40;color: #282826;}"
         )
         save_button.clicked.connect(self.send_configs_to_pico)
@@ -626,16 +626,16 @@ class MainWindow(QMainWindow):
             32, 32, Qt.IgnoreAspectRatio, Qt.SmoothTransformation
         )
         kz_label = QLabel()
-        kz_label.setStyleSheet("border: 2px solid #89bd40;" "margin: 0 0 5 5;")
-        kz_label.setFixedWidth(41)
+        kz_label.setStyleSheet("border: 2px solid #89bd40;" "margin: 0 0 9 9;")
+        kz_label.setFixedWidth(45)
         kz_label.setPixmap(kz_icon)
 
         degen_icon = QPixmap(PROGRAM_DIR + "/../assets/degen_icon.png").scaled(
             32, 32, Qt.IgnoreAspectRatio, Qt.SmoothTransformation
         )
         degen_label = QLabel()
-        degen_label.setStyleSheet("border: 2px solid #89bd40;" "margin: 0 5 5 0;")
-        degen_label.setFixedWidth(41)
+        degen_label.setStyleSheet("border: 2px solid #89bd40;" "margin: 0 9 9 0;")
+        degen_label.setFixedWidth(45)
         degen_label.setPixmap(degen_icon)
 
         lower_side = QHBoxLayout()
