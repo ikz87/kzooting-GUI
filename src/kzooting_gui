@@ -1,6 +1,7 @@
 #!/bin/python3
 
 import kzserial
+import os
 import sys
 import serial
 import inotify.adapters
@@ -11,6 +12,7 @@ from PyQt5.QtGui import *
 from PyQt5.QtWidgets import *
 from PyQt5.QtCore import Qt, pyqtSignal, QObject, QTimer
 
+PROGRAM_DIR = os.path.dirname(os.path.abspath(sys.argv[0]))
 
 class State(QObject):
     """
@@ -550,17 +552,17 @@ class Visualizer(QWidget):
         # Set up switch icon
         # The switch is divided in 3 to create an
         # up and down motion
-        switch_top = QPixmap("../assets/switch_top.png").scaledToWidth(100, Qt.SmoothTransformation)
+        switch_top = QPixmap(PROGRAM_DIR + "/../assets/switch_top.png").scaledToWidth(100, Qt.SmoothTransformation)
         switch_top_label = QLabel()
         switch_top_label.setPixmap(switch_top)
 
-        switch_mid = QPixmap("../assets/switch_mid.png").scaledToWidth(100, Qt.SmoothTransformation)
+        switch_mid = QPixmap(PROGRAM_DIR + "/../assets/switch_mid.png").scaledToWidth(100, Qt.SmoothTransformation)
         switch_mid_label = QLabel()
         switch_mid_label.setPixmap(switch_mid)
         switch_mid_height = 25
         switch_mid_label.setFixedHeight(switch_mid_height)
 
-        switch_bottom = QPixmap("../assets/switch_bottom.png").scaledToWidth(100, Qt.SmoothTransformation)
+        switch_bottom = QPixmap(PROGRAM_DIR + "/../assets/switch_bottom.png").scaledToWidth(100, Qt.SmoothTransformation)
         switch_bottom_label = QLabel()
         switch_bottom_label.setPixmap(switch_bottom)
         switch_bottom_label.setStyleSheet(
@@ -612,7 +614,7 @@ class MainWindow(QMainWindow):
         state.out_configs = {}
 
         # Use local qss
-        self.setStyleSheet(open("style.qss", "r").read())
+        self.setStyleSheet(open(PROGRAM_DIR + "/style.qss", "r").read())
 
         # Add a grid
         self.root_grid = QGridLayout()
@@ -621,9 +623,6 @@ class MainWindow(QMainWindow):
         self.setCentralWidget(self.root_window)
 
         # Create widgets
-        switch_icon = QPixmap("../assets/switch.png")
-        switch_label = QLabel()
-        switch_label.setPixmap(switch_icon)
         general_info = GeneralInfo(state)
         general_configs = GeneralConfigs(state)
         key_configs = KeyConfigs(state)
@@ -636,7 +635,7 @@ class MainWindow(QMainWindow):
             "QPushButton:pressed {padding: 7 0 5 0;background-color: #B2CFFF;color: #1B203C;}"
         )
         save_button.clicked.connect(self.send_configs_to_pico)
-        kz_icon = QPixmap("../assets/kz_icon.jpeg").scaled(32,32,
+        kz_icon = QPixmap(PROGRAM_DIR + "/../assets/kz_icon.jpeg").scaled(32,32,
                                                            Qt.IgnoreAspectRatio,
                                                            Qt.SmoothTransformation)
         kz_label = QLabel()
@@ -647,7 +646,7 @@ class MainWindow(QMainWindow):
         kz_label.setFixedWidth(41)
         kz_label.setPixmap(kz_icon)
 
-        degen_icon = QPixmap("../assets/degen_icon.png").scaled(32,32,
+        degen_icon = QPixmap(PROGRAM_DIR + "/../assets/degen_icon.png").scaled(32,32,
                                                                 Qt.IgnoreAspectRatio,
                                                                 Qt.SmoothTransformation)
         degen_label = QLabel()
