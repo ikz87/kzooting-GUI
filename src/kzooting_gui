@@ -509,8 +509,8 @@ class KeyConfigs(QWidget):
             add_button.clicked.connect(add_action)
             remove_button = QPushButton("Remove action")
             remove_button.clicked.connect(remove_action)
-            buttons_hbox.addWidget(add_button)
             buttons_hbox.addWidget(remove_button)
+            buttons_hbox.addWidget(add_button)
             actions_vbox.addLayout(buttons_hbox)
 
 
