@@ -44,17 +44,6 @@ class State(QObject):
         self.__update_signal.emit(property_name, value)
 
 
-class Filler(QLabel):
-    """
-    Filler class only containing a label
-    To be removed when actual widgets are added
-    """
-
-    def __init__(self):
-        super(Filler, self).__init__()
-        self.setText("Some filler")
-
-
 class GeneralInfo(QWidget):
     """
     Top left quadrant of the window
