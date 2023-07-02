@@ -680,12 +680,10 @@ class MainWindow(QMainWindow):
         Sends a configs to the pico to be rewritten
         """
         try:
-            # Temp code until key configs are also updated
-            # configs_dict = self.state.in_configs
             configs_dict = self.state.out_configs
             configs_json = json.dumps(configs_dict)
             self.rpp.write((configs_json + "\n").encode())
-        except:
+        except (OSError, serial.SerialException, json.JSONDecodeError):
             pass
 
     def update_open_port(self, port):
