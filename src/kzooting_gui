@@ -256,7 +256,6 @@ class RemapperComboBox(QComboBox):
             self.addItem(key_string)
         self.setCurrentText(keycodes.strings[keycode])
         self.view().setMinimumWidth(170)
-        self.setStyleSheet("QComboBox{width: 40px;}")
         # Alignment
         # self.setEditable(True)
         # self.lineEdit().setAlignment(Qt.AlignmentFlag.AlignHCenter)
@@ -275,7 +274,7 @@ class RemapperHBox(QHBoxLayout):
         current_combo_boxes = box_keycodes[state.selected_key]
         # Add label at the left
         number_label = QLabel(f"{j+1}:")
-        number_label.setStyleSheet("background-color: #282826;")
+        number_label.setProperty("class", "ActionNumberLabel")
         self.addWidget(number_label)
 
         def update_dict_from_options():
@@ -391,7 +390,7 @@ class KeyConfigs(QWidget):
 
         # Set up dropdown menu for keys
         keys_menu = QComboBox()
-        keys_menu.setStyleSheet("QComboBox {margin-bottom: 15px;}")
+        keys_menu.setProperty("class", "KeysComboBox")
 
         for i in range(9):
             state.out_configs[f"key_{i+1}"] = {}
@@ -402,7 +401,7 @@ class KeyConfigs(QWidget):
         remap_sl = QStackedWidget()
         for i in range(9):
             remap_gb = QGroupBox(f"Key_{i+1} actions:")
-            remap_gb.setStyleSheet("QGroupBox {min-height: 250px;}")
+            remap_gb.setProperty("class", "RemapperGroupBox")
             remap_gb.setLayout(QVBoxLayout())
             remap_sl.addWidget(remap_gb)
 
@@ -525,7 +524,7 @@ class Visualizer(QWidget):
         bar.setMinimum(0)
         bar.setInvertedAppearance(True)
         bar_label = QLabel()
-        bar_label.setStyleSheet("font-size: 11px;")
+        bar_label.setProperty("class", "BarLabel")
         bar_label.setText("0.0 mm")
         bar_label.setAlignment(Qt.AlignmentFlag.AlignCenter)
         bar_label.setBuddy(bar)
@@ -555,7 +554,7 @@ class Visualizer(QWidget):
         ).scaledToWidth(100, Qt.SmoothTransformation)
         switch_bottom_label = QLabel()
         switch_bottom_label.setPixmap(switch_bottom)
-        switch_bottom_label.setStyleSheet("padding: 0 0 12 0")
+        switch_bottom_label.setProperty("class", "SwitchBottomLabel")
 
         switch_vbox = QVBoxLayout()
         switch_vbox.addStretch()
@@ -581,9 +580,12 @@ class Visualizer(QWidget):
 
             # Update color
             if info[state.selected_key]["state"]:
-                bar.setStyleSheet("QProgressBar::chunk{background-color: #89bd40}")
+                bar.setProperty("class", "ActiveBar")
             else:
-                bar.setStyleSheet("QProgressBar::chunk{background-color: #555555}")
+                bar.setProperty("class", "InactiveBar")
+
+            # Make the bar update its style
+            bar.style().polish(bar)
 
         state.attach_listener("info", update_bar_contents)
 
@@ -617,16 +619,13 @@ class MainWindow(QMainWindow):
 
         # Lower side
         save_button = QPushButton("&Save", self)
-        save_button.setStyleSheet(
-            "QPushButton {padding: 5 0 8 0; margin: 0 0 9 0;}"
-            "QPushButton:pressed {padding: 7 0 5 0;background-color: #89bd40;color: #282826;}"
-        )
+        save_button.setProperty("class", "SaveButton")
         save_button.clicked.connect(self.send_configs_to_pico)
         kz_icon = QPixmap(PROGRAM_DIR + "/../assets/kz_icon.jpeg").scaled(
             32, 32, Qt.IgnoreAspectRatio, Qt.SmoothTransformation
         )
         kz_label = QLabel()
-        kz_label.setStyleSheet("border: 2px solid #89bd40;" "margin: 0 0 9 9;")
+        kz_label.setProperty("class", "KzButton")
         kz_label.setFixedWidth(45)
         kz_label.setPixmap(kz_icon)
 
@@ -634,7 +633,7 @@ class MainWindow(QMainWindow):
             32, 32, Qt.IgnoreAspectRatio, Qt.SmoothTransformation
         )
         degen_label = QLabel()
-        degen_label.setStyleSheet("border: 2px solid #89bd40;" "margin: 0 9 9 0;")
+        degen_label.setProperty("class", "DegenLabel")
         degen_label.setFixedWidth(45)
         degen_label.setPixmap(degen_icon)
 

@@ -65,7 +65,6 @@ QPushButton {
     padding: 3 9 5 9;
 }
 
-
 QPushButton:pressed {
     padding: 7 0 1 0;
     background-color: #89bd40;
@@ -87,8 +86,61 @@ QProgressBar {
     width: 40px;
     height: 180px;
 }
-    
+
 QProgressBar::chunk {
     background-color: #8E735D;
     height: 1px;
+}
+
+    
+/* CUSTOM CLASSES */
+.RemapperGroupBox {
+    min-height: 250px;
+}
+
+.KeysComboBox {
+    margin-bottom: 15px;
+}
+
+.RemapperComboBox {
+    width: 40px;
+}
+
+.ActionNumberLabel {
+    background-color: #282826;
+}
+
+.BarLabel {
+    font-size: 11px;
+}
+
+.SwitchBottomLabel {
+    padding: 0 0 12 0;
+}
+
+.SaveButton {
+    padding: 5 0 8 0; margin: 0 0 9 0;
+}
+
+.SaveButton:pressed {
+    padding: 7 0 5 0;
+}
+.ActiveBar::chunk {
+    background-color: #89bd40;
+    height: 1px;
+}
+
+.InactiveBar::chunk {
+    background-color: #555555;
+    height: 1px;
+}
+
+.KzLabel {
+    border: 2px solid #89bd40;
+    margin: 0 0 9 9;
+}
+
+.DegenLabel {
+    border: 2px solid #89bd40;
+    margin: 0 9 9 9;
 }
