@@ -142,5 +142,5 @@ QProgressBar::chunk {
 
 .DegenLabel {
     border: 2px solid #89bd40;
-    margin: 0 9 9 9;
+    margin: 0 9 9 0;
 }

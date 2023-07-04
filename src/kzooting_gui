@@ -615,7 +615,7 @@ class MainWindow(QMainWindow):
             32, 32, Qt.IgnoreAspectRatio, Qt.SmoothTransformation
         )
         kz_label = QLabel()
-        kz_label.setProperty("class", "KzButton")
+        kz_label.setProperty("class", "KzLabel")
         kz_label.setFixedWidth(45)
         kz_label.setPixmap(kz_icon)
 
