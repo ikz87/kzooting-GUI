@@ -4,7 +4,6 @@ import kzserial
 import os
 import sys
 import serial
-import inotify.adapters
 import json
 import keycodes
 import collections
@@ -650,25 +649,19 @@ class MainWindow(QMainWindow):
         # Watch for changes in ports directory
         self.rpp = None
 
-        watcher = inotify.adapters.Inotify(block_duration_s=0.01)
-        watcher.add_watch("/dev/")
-
-        def watch_ports():
+        def update_ports_list():
             """
-            Watches for changes in /dev/tty and
-            updates ports accordingly
+            Updates available ports
             """
-            for event in watcher.event_gen(yield_nones=False, timeout_s=0.01):
-                (_, event_types, path, filename) = event
-                if "ttyA" in filename:
-                    if "IN_CLOSE_NOWRITE" in event_types or "IN_DELETE" in event_types:
-                        self.state.available_ports = kzserial.get_serial_ports()
+            new_ports = kzserial.get_serial_ports()
+            if new_ports != self.state.available_ports:
+                self.state.available_ports = kzserial.get_serial_ports()
 
         state.attach_listener("selected_port", lambda port: self.update_open_port(port))
 
         self.state.available_ports = kzserial.get_serial_ports()
         timer1 = QTimer(self)
-        timer1.timeout.connect(watch_ports)
+        timer1.timeout.connect(update_ports_list)
         timer1.start(500)
 
         timer2 = QTimer(self)
