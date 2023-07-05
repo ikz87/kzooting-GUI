@@ -110,6 +110,10 @@ QProgressBar::chunk {
     background-color: #282826;
 }
 
+.ActionButton {
+    width: 120px;
+}
+
 .BarLabel {
     font-size: 11px;
 }

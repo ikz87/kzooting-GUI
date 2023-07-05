@@ -485,10 +485,13 @@ class KeyConfigs(QWidget):
             # Now add buttons
             buttons_hbox = QHBoxLayout()
             add_button = QPushButton("Add action")
+            add_button.setProperty("class", "ActionButton")
             add_button.clicked.connect(add_action)
             remove_button = QPushButton("Remove action")
+            remove_button.setProperty("class", "ActionButton")
             remove_button.clicked.connect(remove_action)
             buttons_hbox.addWidget(remove_button)
+            buttons_hbox.addStretch()
             buttons_hbox.addWidget(add_button)
             actions_vbox.addLayout(buttons_hbox)
 
