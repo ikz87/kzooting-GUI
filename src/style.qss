@@ -1,28 +1,28 @@
 * {
-    background-color: #0f0f0e;
+    background-color: #060303;
     color: #F9FCFF;
     font-family: CartographCF;
     font-size: 15px;
 }
 
 QComboBox, QListView, QPushButton, QGroupBox, QProgressBar {
-    background-color: #282826;
-    border: 2px solid #89bd40;
+    background-color: #291111;
+    border: 2px solid #ff4d49;
 }
 
 QComboBox {
     padding: 2 0 4 8;
-    selection-background-color: #89bd40;
-    selection-color: #282826;
+    selection-background-color: #ff4d49;
+    selection-color: #291111;
 }
 
 QComboBox:on {
     padding: 4 0 2 0;
-    background-color: #89bd40;
+    background-color: #ff4d49;
 }
 
 QComboBox:drop-down {
-    background-color: #282826;
+    background-color: #291111;
 }
 
 QGroupBox {
@@ -34,8 +34,8 @@ QGroupBox::title {
     subcontrol-origin: margin;
     subcontrol-position: top left;
     padding: 0 0 2 0;
-    background-color: #282826;
-    border: 2px solid #89bd40;
+    background-color: #291111;
+    border: 2px solid #ff4d49;
 }
 
 QLabel[text="Sensitivity"], 
@@ -45,20 +45,20 @@ QLabel[text="Bottom deadzone"],
 QLabel[text="Actuation point"], 
 QLabel[text="Actuation reset"],
 QRadioButton {
-    background-color: #282826;
+    background-color: #291111;
 }
 
 QRadioButton::indicator {
-    border: 2px solid #89bd40;
+    border: 2px solid #ff4d49;
     border-radius: 7px;
 }
 
 QRadioButton::indicator:unchecked {
-    background-color: #0f0f0e;
+    background-color: #060303;
 }
 
 QRadioButton::indicator:checked {
-    background-color: #89bd40;
+    background-color: #ff4d49;
 }
     
 QPushButton {
@@ -67,17 +67,17 @@ QPushButton {
 
 QPushButton:pressed {
     padding: 7 0 1 0;
-    background-color: #89bd40;
-    color: #282826;
+    background-color: #ff4d49;
+    color: #291111;
 }
 
 QDoubleSpinBox {
-    border: 2px solid #89bd40;
+    border: 2px solid #ff4d49;
     margin: 0 0 10 0;
 }
 
 QDoubleSpinBox::up-button, QDoubleSpinBox::down-button {
-    background-color: #282826;
+    background-color: #291111;
     height: 0;
 }
 
@@ -88,7 +88,7 @@ QProgressBar {
 }
 
 QProgressBar::chunk {
-    background-color: #8E735D;
+    background-color: #CE5A32;
     height: 1px;
 }
 
@@ -107,7 +107,7 @@ QProgressBar::chunk {
 }
 
 .ActionNumberLabel {
-    background-color: #282826;
+    background-color: #291111;
 }
 
 .ActionButton {
@@ -130,7 +130,7 @@ QProgressBar::chunk {
     padding: 7 0 5 0;
 }
 .ActiveBar::chunk {
-    background-color: #89bd40;
+    background-color: #ff4d49;
     height: 1px;
 }
 
@@ -140,11 +140,11 @@ QProgressBar::chunk {
 }
 
 .KzLabel {
-    border: 2px solid #89bd40;
+    border: 2px solid #ff4d49;
     margin: 0 0 9 9;
 }
 
 .DegenLabel {
-    border: 2px solid #89bd40;
+    border: 2px solid #ff4d49;
     margin: 0 9 9 0;
 }

@@ -12,7 +12,7 @@ from PyQt5.QtWidgets import *
 from PyQt5.QtCore import Qt, pyqtSignal, QObject, QTimer
 
 PROGRAM_DIR = os.path.dirname(os.path.abspath(sys.argv[0]))
-TOTAL_KEYS = 9
+TOTAL_KEYS = 2
 
 
 class State(QObject):
@@ -155,7 +155,7 @@ class GeneralConfigs(QWidget):
         rt_options = QGroupBox("Rapid trigger options")
         rt_options.setLayout(rt_options_vbox)
 
-        # Fixed actuation scpecific options
+        # Fixed actuation specific options
         actuation_point = QDoubleSpinBox()
         actuation_point.setSuffix("mm")
         actuation_point.setDecimals(2)
@@ -184,6 +184,61 @@ class GeneralConfigs(QWidget):
         fa_options.setLayout(fa_options_vbox)
         fa_options_vbox.addStretch()
 
+        # LED color options
+        inactive_led_button = QPushButton()
+        inactive_led_button.setFixedSize(80, 30)
+        inactive_led_label = QLabel("Inactive LED")
+        inactive_led_label.setBuddy(inactive_led_button)
+
+        active_led_button = QPushButton()
+        active_led_button.setFixedSize(80, 30)
+        active_led_label = QLabel("Active LED")
+        active_led_label.setBuddy(active_led_button)
+
+        def set_button_color(button, hex_color):
+            button.setStyleSheet(
+                f"background-color: {hex_color}; border: 2px solid #ff4d49;"
+            )
+
+        def update_dict_from_options():
+            state.out_configs["general"]["rapid_trigger"] = rapid_trigger_rb.isChecked()
+            state.out_configs["general"]["sensitivity"] = sensitivity.value()
+            state.out_configs["general"]["top_deadzone"] = top_deadzone.value()
+            state.out_configs["general"]["bottom_deadzone"] = bottom_deadzone.value()
+            state.out_configs["general"]["actuation_point"] = actuation_point.value()
+            state.out_configs["general"]["actuation_reset"] = actuation_reset.value()
+
+            if rapid_trigger_rb.isChecked():
+                sub_options.setCurrentWidget(rt_options)
+            else:
+                sub_options.setCurrentWidget(fa_options)
+
+        def pick_inactive_color():
+            color = QColorDialog.getColor()
+            if color.isValid():
+                hex_color = color.name()
+                set_button_color(inactive_led_button, hex_color)
+                state.out_configs["general"]["inactive_led"] = hex_color
+
+        def pick_active_color():
+            color = QColorDialog.getColor()
+            if color.isValid():
+                hex_color = color.name()
+                set_button_color(active_led_button, hex_color)
+                state.out_configs["general"]["active_led"] = hex_color
+
+        inactive_led_button.clicked.connect(pick_inactive_color)
+        active_led_button.clicked.connect(pick_active_color)
+
+        led_options_grid = QGridLayout()
+        led_options_grid.addWidget(inactive_led_label, 0, 0)
+        led_options_grid.addWidget(inactive_led_button, 0, 1)
+        led_options_grid.addWidget(active_led_label, 1, 0)
+        led_options_grid.addWidget(active_led_button, 1, 1)
+
+        led_options = QGroupBox("LED colors")
+        led_options.setLayout(led_options_grid)
+
         # Populate grid
         sub_options = QStackedWidget()
         sub_options.addWidget(rt_options)
@@ -192,6 +247,7 @@ class GeneralConfigs(QWidget):
         general_configs_grid = QGridLayout()
         general_configs_grid.addWidget(actuation_method, 0, 0)
         general_configs_grid.addWidget(sub_options, 1, 0)
+        general_configs_grid.addWidget(led_options, 2, 0)
         self.setLayout(general_configs_grid)
 
         def update_options_from_dict(configs):
@@ -200,8 +256,11 @@ class GeneralConfigs(QWidget):
             bottom_deadzone.setValue(configs["general"]["bottom_deadzone"])
             actuation_point.setValue(configs["general"]["actuation_point"])
             actuation_reset.setValue(configs["general"]["actuation_reset"])
+            
+            # Set LED colors
+            set_button_color(inactive_led_button, configs["general"]["inactive_led"])
+            set_button_color(active_led_button, configs["general"]["active_led"])
 
-            # Update group box that is shown
             if configs["general"]["rapid_trigger"]:
                 rapid_trigger_rb.setChecked(True)
                 sub_options.setCurrentWidget(rt_options)

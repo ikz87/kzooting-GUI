@@ -9,6 +9,7 @@ def get_serial_ports():
     Returns a list of all serial  ports
     that *can* be open
     """
+    #return ['/dev/ttyACM0']
     if sys.platform.startswith("win"):
         ports = ["COM%s" % (i + 1) for i in range(256)]
     elif sys.platform.startswith("linux") or sys.platform.startswith("cygwin"):
