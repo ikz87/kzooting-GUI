@@ -5,15 +5,32 @@ import os
 import sys
 import serial
 import json
+import colorsys
 import keycodes
 import collections
 from PyQt5.QtGui import *
 from PyQt5.QtWidgets import *
-from PyQt5.QtCore import Qt, pyqtSignal, QObject, QTimer
+from PyQt5.QtCore import Qt, pyqtSignal, QObject, QTimer, QRect
 
 PROGRAM_DIR = os.path.dirname(os.path.abspath(sys.argv[0]))
 TOTAL_KEYS = 2
 
+def get_resource_path(relative_path):
+    """Get absolute path to resource, works for dev and PyInstaller"""
+    if getattr(sys, 'frozen', False):
+        base_path = sys._MEIPASS
+    else:
+        base_path = os.path.dirname(os.path.abspath(sys.argv[0]))
+    return os.path.join(base_path, relative_path)
+
+# Conversion functions between ADC and voltage
+def adc_to_voltage(adc_value):
+    """Convert ADC value to voltage (16-bit ADC, 3.3V reference)"""
+    return (adc_value / 65535) * 3.3
+
+def voltage_to_adc(voltage):
+    """Convert voltage to ADC value (16-bit ADC, 3.3V reference)"""
+    return int((voltage / 3.3) * 65535)
 
 class State(QObject):
     """
@@ -42,6 +59,197 @@ class State(QObject):
     def __setattr__(self, property_name, value):
         self.__dict__[property_name] = value
         self.__update_signal.emit(property_name, value)
+
+
+class ColorPickerWidget(QWidget):
+    """Custom color picker with S/L box and hue bar"""
+    
+    colorChanged = pyqtSignal(str)
+    
+    def __init__(self, initial_color="#000000"):
+        super().__init__()
+        self.setFixedSize(320, 280)
+        
+        # Parse initial color
+        color = QColor(initial_color)
+        self.hue = color.hueF() if color.hueF() >= 0 else 0
+        self.sat = color.saturationF()
+        self.light = color.lightnessF()
+        
+        self.sl_box_rect = QRect(10, 10, 240, 240)
+        self.hue_bar_rect = QRect(260, 10, 30, 240)
+        
+        self.dragging_sl = False
+        self.dragging_hue = False
+        
+    def paintEvent(self, event):
+        painter = QPainter(self)
+        painter.setRenderHint(QPainter.Antialiasing)
+        
+        # Draw S/L box
+        for y in range(self.sl_box_rect.height()):
+            for x in range(self.sl_box_rect.width()):
+                s = x / self.sl_box_rect.width()
+                l = 1 - (y / self.sl_box_rect.height())
+                color = QColor.fromHslF(self.hue, s, l)
+                painter.setPen(color)
+                painter.drawPoint(
+                    self.sl_box_rect.x() + x,
+                    self.sl_box_rect.y() + y
+                )
+        
+        # Draw border around S/L box
+        painter.setPen(QPen(QColor("#ff4d49"), 2))
+        painter.drawRect(self.sl_box_rect)
+        
+        # Draw current position marker on S/L box
+        marker_x = int(self.sl_box_rect.x() + self.sat * self.sl_box_rect.width())
+        marker_y = int(self.sl_box_rect.y() + (1 - self.light) * self.sl_box_rect.height())
+        painter.setPen(QPen(Qt.white, 2))
+        painter.drawEllipse(marker_x - 5, marker_y - 5, 10, 10)
+        painter.setPen(QPen(Qt.black, 1))
+        painter.drawEllipse(marker_x - 4, marker_y - 4, 8, 8)
+        
+        # Draw hue bar
+        for y in range(self.hue_bar_rect.height()):
+            h = y / self.hue_bar_rect.height()
+            color = QColor.fromHslF(h, 1.0, 0.5)
+            painter.setPen(color)
+            painter.drawLine(
+                self.hue_bar_rect.x(),
+                self.hue_bar_rect.y() + y,
+                self.hue_bar_rect.right(),
+                self.hue_bar_rect.y() + y
+            )
+        
+        # Draw border around hue bar
+        painter.setPen(QPen(QColor("#ff4d49"), 2))
+        painter.drawRect(self.hue_bar_rect)
+        
+        # Draw current hue marker
+        hue_y = int(self.hue_bar_rect.y() + self.hue * self.hue_bar_rect.height())
+        painter.setPen(QPen(Qt.white, 2))
+        painter.drawLine(
+            self.hue_bar_rect.x() - 2,
+            hue_y,
+            self.hue_bar_rect.right() + 2,
+            hue_y
+        )
+        
+    def mousePressEvent(self, event):
+        if self.sl_box_rect.contains(event.pos()):
+            self.dragging_sl = True
+            self.update_sl_from_mouse(event.pos())
+        elif self.hue_bar_rect.contains(event.pos()):
+            self.dragging_hue = True
+            self.update_hue_from_mouse(event.pos())
+    
+    def mouseMoveEvent(self, event):
+        if self.dragging_sl:
+            self.update_sl_from_mouse(event.pos())
+        elif self.dragging_hue:
+            self.update_hue_from_mouse(event.pos())
+    
+    def mouseReleaseEvent(self, event):
+        self.dragging_sl = False
+        self.dragging_hue = False
+    
+    def update_sl_from_mouse(self, pos):
+        x = max(0, min(pos.x() - self.sl_box_rect.x(), self.sl_box_rect.width()))
+        y = max(0, min(pos.y() - self.sl_box_rect.y(), self.sl_box_rect.height()))
+        
+        self.sat = x / self.sl_box_rect.width()
+        self.light = 1 - (y / self.sl_box_rect.height())
+        
+        self.update()
+        self.colorChanged.emit(self.get_hex_color())
+    
+    def update_hue_from_mouse(self, pos):
+        y = max(0, min(pos.y() - self.hue_bar_rect.y(), self.hue_bar_rect.height()))
+        self.hue = y / self.hue_bar_rect.height()
+        
+        self.update()
+        self.colorChanged.emit(self.get_hex_color())
+    
+    def get_hex_color(self):
+        color = QColor.fromHslF(self.hue, self.sat, self.light)
+        return color.name()
+    
+    def set_hex_color(self, hex_color):
+        color = QColor(hex_color)
+        if color.isValid():
+            self.hue = color.hueF() if color.hueF() >= 0 else 0
+            self.sat = color.saturationF()
+            self.light = color.lightnessF()
+            self.update()
+
+
+class ColorPickerDialog(QDialog):
+    def __init__(self, initial_color="#000000", parent=None):
+        super().__init__(parent)
+        self.setWindowTitle("Pick Color")
+        self.selected_color = initial_color
+        
+        layout = QVBoxLayout()
+        
+        # Color picker widget
+        self.color_picker = ColorPickerWidget(initial_color)
+        
+        # Hex input with preview
+        hex_layout = QHBoxLayout()
+        hex_label = QLabel("Hex:")
+        self.hex_input = QLineEdit(initial_color)
+        self.hex_input.setMaxLength(7)
+        
+        # Color preview button
+        self.preview_button = QPushButton()
+        self.preview_button.setFixedSize(80, 30)
+        self.preview_button.setStyleSheet(
+            f"background-color: {initial_color}; border: 0px;"
+        )
+        self.preview_button.setEnabled(False)
+        
+        hex_layout.addWidget(hex_label)
+        hex_layout.addWidget(self.hex_input)
+        hex_layout.addWidget(self.preview_button)
+        
+        # Buttons
+        buttons = QHBoxLayout()
+        cancel_btn = QPushButton("Cancel")
+        ok_btn = QPushButton("OK")
+        cancel_btn.clicked.connect(self.reject)
+        ok_btn.clicked.connect(self.accept)
+        buttons.addStretch()
+        buttons.addWidget(cancel_btn)
+        buttons.addWidget(ok_btn)
+        
+        layout.addWidget(self.color_picker)
+        layout.addLayout(hex_layout)
+        layout.addLayout(buttons)
+        self.setLayout(layout)
+        
+        # Connect signals
+        self.color_picker.colorChanged.connect(self.on_picker_color_changed)
+        self.hex_input.textEdited.connect(self.on_hex_input_changed)
+        
+        self.setFixedSize(400, 370)
+    
+    def on_picker_color_changed(self, hex_color):
+        self.hex_input.setText(hex_color)
+        self.preview_button.setStyleSheet(
+            f"background-color: {hex_color}; border: 0px;"
+        )
+        self.selected_color = hex_color
+    
+    def on_hex_input_changed(self, text):
+        if len(text) == 7 and text.startswith('#'):
+            color = QColor(text)
+            if color.isValid():
+                self.color_picker.set_hex_color(text)
+                self.preview_button.setStyleSheet(
+                    f"background-color: {text}; border: 0px;"
+                )
+                self.selected_color = text
 
 
 class GeneralInfo(QWidget):
@@ -197,7 +405,7 @@ class GeneralConfigs(QWidget):
 
         def set_button_color(button, hex_color):
             button.setStyleSheet(
-                f"background-color: {hex_color}; border: 2px solid #ff4d49;"
+                f"background-color: {hex_color}; border: 0px;"
             )
 
         def update_dict_from_options():
@@ -214,18 +422,21 @@ class GeneralConfigs(QWidget):
                 sub_options.setCurrentWidget(fa_options)
 
         def pick_inactive_color():
-            color = QColorDialog.getColor()
-            if color.isValid():
-                hex_color = color.name()
+            initial = state.out_configs["general"].get("inactive_led", "#000000")
+            dialog = ColorPickerDialog(initial, self)
+            if dialog.exec_() == QDialog.Accepted:
+                hex_color = dialog.selected_color
                 set_button_color(inactive_led_button, hex_color)
                 state.out_configs["general"]["inactive_led"] = hex_color
 
         def pick_active_color():
-            color = QColorDialog.getColor()
-            if color.isValid():
-                hex_color = color.name()
+            initial = state.out_configs["general"].get("active_led", "#ff0000")
+            dialog = ColorPickerDialog(initial, self)
+            if dialog.exec_() == QDialog.Accepted:
+                hex_color = dialog.selected_color
                 set_button_color(active_led_button, hex_color)
                 state.out_configs["general"]["active_led"] = hex_color
+
 
         inactive_led_button.clicked.connect(pick_inactive_color)
         active_led_button.clicked.connect(pick_active_color)
@@ -427,6 +638,152 @@ class RemapperHBox(QHBoxLayout):
         self.addWidget(add_button)
 
 
+class CalibrationControls(QWidget):
+    """
+    Per-key calibration controls
+    """
+
+    def __init__(self, state):
+        super(CalibrationControls, self).__init__()
+        self.state = state
+
+        # Top voltage (released position)
+        top_voltage = QDoubleSpinBox()
+        top_voltage.setSuffix("V")
+        top_voltage.setDecimals(3)
+        top_voltage.setRange(0.0, 3.3)
+        top_voltage.setSingleStep(0.001)
+        top_voltage_label = QLabel("Top out voltage")
+        top_voltage_label.setBuddy(top_voltage)
+
+        # Bottom voltage (pressed position)
+        bottom_voltage = QDoubleSpinBox()
+        bottom_voltage.setSuffix("V")
+        bottom_voltage.setDecimals(3)
+        bottom_voltage.setRange(0.0, 3.3)
+        bottom_voltage.setSingleStep(0.001)
+        bottom_voltage_label = QLabel("Bottom out voltage")
+        bottom_voltage_label.setBuddy(bottom_voltage)
+
+        # Layout
+        calibration_vbox = QVBoxLayout()
+        calibration_vbox.addWidget(top_voltage_label)
+        calibration_vbox.addWidget(top_voltage)
+        calibration_vbox.addWidget(bottom_voltage_label)
+        calibration_vbox.addWidget(bottom_voltage)
+        calibration_vbox.addStretch()
+
+        calibration_gb = QGroupBox("Manual calibration")
+        calibration_gb.setLayout(calibration_vbox)
+
+        main_layout = QVBoxLayout()
+        main_layout.addWidget(calibration_gb)
+        self.setLayout(main_layout)
+
+        # Store references for callbacks
+        self.top_voltage = top_voltage
+        self.bottom_voltage = bottom_voltage
+
+        def validate_voltage_ranges():
+            """Ensure bottom voltage is always >= top voltage"""
+            top_val = top_voltage.value()
+            bottom_val = bottom_voltage.value()
+            
+            # Update ranges to prevent invalid combinations
+            bottom_voltage.setMinimum(top_val)
+            top_voltage.setMaximum(bottom_val)
+
+        def update_dict_from_options():
+            """Update calibration values in config (convert voltage to ADC)"""
+            if not hasattr(state, 'selected_key'):
+                return
+            
+            if state.selected_key not in state.out_configs:
+                state.out_configs[state.selected_key] = {}
+            if "calibration" not in state.out_configs[state.selected_key]:
+                state.out_configs[state.selected_key]["calibration"] = {}
+
+            state.out_configs[state.selected_key]["calibration"]["top_adc"] = voltage_to_adc(top_voltage.value())
+            state.out_configs[state.selected_key]["calibration"]["bottom_adc"] = voltage_to_adc(bottom_voltage.value())
+
+        def on_top_voltage_changed():
+            """Handle top voltage changes with validation"""
+            validate_voltage_ranges()
+            update_dict_from_options()
+
+        def on_bottom_voltage_changed():
+            """Handle bottom voltage changes with validation"""
+            validate_voltage_ranges()
+            update_dict_from_options()
+
+        def update_options_from_dict(configs):
+            """Update GUI from config (convert ADC to voltage)"""
+            if not hasattr(state, 'selected_key'):
+                return
+                
+            if state.selected_key in configs and "calibration" in configs[state.selected_key]:
+                cal_data = configs[state.selected_key]["calibration"]
+                
+                # Temporarily disconnect signals to avoid triggering validation during setup
+                top_voltage.valueChanged.disconnect()
+                bottom_voltage.valueChanged.disconnect()
+                
+                # Set values
+                top_val = adc_to_voltage(cal_data.get("top_adc", 32000))
+                bottom_val = adc_to_voltage(cal_data.get("bottom_adc", 34000))
+                
+                # Reset ranges before setting values
+                top_voltage.setRange(0.0, 3.3)
+                bottom_voltage.setRange(0.0, 3.3)
+                
+                top_voltage.setValue(top_val)
+                bottom_voltage.setValue(bottom_val)
+                
+                # Validate ranges after setting values
+                validate_voltage_ranges()
+                
+                # Reconnect signals
+                top_voltage.valueChanged.connect(on_top_voltage_changed)
+                bottom_voltage.valueChanged.connect(on_bottom_voltage_changed)
+
+        def update_options_from_key():
+            """Update GUI when selected key changes"""
+            if hasattr(state, 'out_configs') and state.selected_key in state.out_configs:
+                if "calibration" in state.out_configs[state.selected_key]:
+                    cal_data = state.out_configs[state.selected_key]["calibration"]
+                    
+                    # Temporarily disconnect signals
+                    top_voltage.valueChanged.disconnect()
+                    bottom_voltage.valueChanged.disconnect()
+                    
+                    # Reset ranges before setting values
+                    top_voltage.setRange(0.0, 3.3)
+                    bottom_voltage.setRange(0.0, 3.3)
+                    
+                    # Set values
+                    top_val = adc_to_voltage(cal_data.get("top_adc", 32000))
+                    bottom_val = adc_to_voltage(cal_data.get("bottom_adc", 34000))
+                    
+                    top_voltage.setValue(top_val)
+                    bottom_voltage.setValue(bottom_val)
+                    
+                    # Validate ranges after setting values
+                    validate_voltage_ranges()
+                    
+                    # Reconnect signals
+                    top_voltage.valueChanged.connect(on_top_voltage_changed)
+                    bottom_voltage.valueChanged.connect(on_bottom_voltage_changed)
+
+        # Connect signals with validation
+        top_voltage.valueChanged.connect(on_top_voltage_changed)
+        bottom_voltage.valueChanged.connect(on_bottom_voltage_changed)
+        state.attach_listener("in_configs", update_options_from_dict)
+        state.attach_listener("selected_key", lambda key: update_options_from_key())
+
+        # Initial validation
+        validate_voltage_ranges()
+
+
 class KeyConfigs(QWidget):
     """
     Top right quadrant of the window
@@ -453,10 +810,14 @@ class KeyConfigs(QWidget):
             remap_gb.setLayout(QVBoxLayout())
             remap_sl.addWidget(remap_gb)
 
+        # Calibration controls
+        calibration_controls = CalibrationControls(state)
+
         # Populate grid
         key_configs_grid = QGridLayout()
         key_configs_grid.addWidget(keys_menu, 0, 0)
         key_configs_grid.addWidget(remap_sl, 1, 0)
+        key_configs_grid.addWidget(calibration_controls, 2, 0)
         self.setLayout(key_configs_grid)
 
         def update_keycodes(configs):
@@ -586,13 +947,13 @@ class Visualizer(QWidget):
         # Set up switch icon
         # The switch is divided in 3 to create an
         # up and down motion
-        switch_top = QPixmap(PROGRAM_DIR + "/../assets/switch_top.png").scaledToWidth(
+        switch_top = QPixmap(get_resource_path("../assets/switch_top.png")).scaledToWidth(
             100, Qt.SmoothTransformation
         )
         switch_top_label = QLabel()
         switch_top_label.setPixmap(switch_top)
 
-        switch_mid = QPixmap(PROGRAM_DIR + "/../assets/switch_mid.png").scaledToWidth(
+        switch_mid = QPixmap(get_resource_path("../assets/switch_mid.png")).scaledToWidth(
             100, Qt.SmoothTransformation
         )
         switch_mid_label = QLabel()
@@ -600,9 +961,9 @@ class Visualizer(QWidget):
         switch_mid_height = 25
         switch_mid_label.setFixedHeight(switch_mid_height)
 
-        switch_bottom = QPixmap(
-            PROGRAM_DIR + "/../assets/switch_bottom.png"
-        ).scaledToWidth(100, Qt.SmoothTransformation)
+        switch_bottom = QPixmap(get_resource_path("../assets/switch_bottom.png")).scaledToWidth(
+            100, Qt.SmoothTransformation
+        )
         switch_bottom_label = QLabel()
         switch_bottom_label.setPixmap(switch_bottom)
         switch_bottom_label.setProperty("class", "SwitchBottomLabel")
@@ -654,7 +1015,7 @@ class MainWindow(QMainWindow):
         state.out_configs = {}
 
         # Use local qss
-        self.setStyleSheet(open(PROGRAM_DIR + "/style.qss", "r").read())
+        self.setStyleSheet(open(get_resource_path("style.qss"), "r").read())
 
         # Add a grid
         self.root_grid = QGridLayout()
@@ -672,7 +1033,7 @@ class MainWindow(QMainWindow):
         save_button = QPushButton("&Save", self)
         save_button.setProperty("class", "SaveButton")
         save_button.clicked.connect(self.send_configs_to_pico)
-        kz_icon = QPixmap(PROGRAM_DIR + "/../assets/kz_icon.jpeg").scaled(
+        kz_icon = QPixmap(get_resource_path("../assets/kz_icon.jpeg")).scaled(
             32, 32, Qt.IgnoreAspectRatio, Qt.SmoothTransformation
         )
         kz_label = QLabel()
@@ -680,7 +1041,7 @@ class MainWindow(QMainWindow):
         kz_label.setFixedWidth(45)
         kz_label.setPixmap(kz_icon)
 
-        degen_icon = QPixmap(PROGRAM_DIR + "/../assets/degen_icon.png").scaled(
+        degen_icon = QPixmap(get_resource_path("../assets/degen_icon.png")).scaled(
             32, 32, Qt.IgnoreAspectRatio, Qt.SmoothTransformation
         )
         degen_label = QLabel()
