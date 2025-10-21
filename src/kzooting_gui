@@ -20,8 +20,10 @@ def get_resource_path(relative_path):
     if getattr(sys, 'frozen', False):
         base_path = sys._MEIPASS
     else:
-        base_path = os.path.dirname(os.path.abspath(sys.argv[0]))
-    return os.path.join(base_path, relative_path)
+        base_path = os.path.dirname(os.path.abspath(__file__))
+    
+    # Normalize path separators for the platform
+    return os.path.normpath(os.path.join(base_path, relative_path))
 
 # Conversion functions between ADC and voltage
 def adc_to_voltage(adc_value):
@@ -947,23 +949,23 @@ class Visualizer(QWidget):
         # Set up switch icon
         # The switch is divided in 3 to create an
         # up and down motion
-        switch_top = QPixmap(get_resource_path("../assets/switch_top.png")).scaledToWidth(
-            100, Qt.SmoothTransformation
-        )
+        switch_top = QPixmap(
+            get_resource_path(os.path.join("assets", "switch_top.png"))
+        ).scaledToWidth(100, Qt.SmoothTransformation)
         switch_top_label = QLabel()
         switch_top_label.setPixmap(switch_top)
 
-        switch_mid = QPixmap(get_resource_path("../assets/switch_mid.png")).scaledToWidth(
-            100, Qt.SmoothTransformation
-        )
+        switch_mid = QPixmap(
+            get_resource_path(os.path.join("assets", "switch_mid.png"))
+        ).scaledToWidth(100, Qt.SmoothTransformation)
         switch_mid_label = QLabel()
         switch_mid_label.setPixmap(switch_mid)
         switch_mid_height = 25
         switch_mid_label.setFixedHeight(switch_mid_height)
 
-        switch_bottom = QPixmap(get_resource_path("../assets/switch_bottom.png")).scaledToWidth(
-            100, Qt.SmoothTransformation
-        )
+        switch_bottom = QPixmap(
+            get_resource_path(os.path.join("assets", "switch_bottom.png"))
+        ).scaledToWidth(100, Qt.SmoothTransformation)
         switch_bottom_label = QLabel()
         switch_bottom_label.setPixmap(switch_bottom)
         switch_bottom_label.setProperty("class", "SwitchBottomLabel")
@@ -1015,7 +1017,9 @@ class MainWindow(QMainWindow):
         state.out_configs = {}
 
         # Use local qss
-        self.setStyleSheet(open(get_resource_path("style.qss"), "r").read())
+        stylesheet_path = get_resource_path("style.qss")
+        with open(stylesheet_path, "r", encoding="utf-8") as f:
+            self.setStyleSheet(f.read())
 
         # Add a grid
         self.root_grid = QGridLayout()
@@ -1033,17 +1037,17 @@ class MainWindow(QMainWindow):
         save_button = QPushButton("&Save", self)
         save_button.setProperty("class", "SaveButton")
         save_button.clicked.connect(self.send_configs_to_pico)
-        kz_icon = QPixmap(get_resource_path("../assets/kz_icon.jpeg")).scaled(
-            32, 32, Qt.IgnoreAspectRatio, Qt.SmoothTransformation
-        )
+        kz_icon = QPixmap(
+            get_resource_path(os.path.join("assets", "kz_icon.jpeg"))
+        ).scaled(32, 32, Qt.IgnoreAspectRatio, Qt.SmoothTransformation)
         kz_label = QLabel()
         kz_label.setProperty("class", "KzLabel")
         kz_label.setFixedWidth(45)
         kz_label.setPixmap(kz_icon)
 
-        degen_icon = QPixmap(get_resource_path("../assets/degen_icon.png")).scaled(
-            32, 32, Qt.IgnoreAspectRatio, Qt.SmoothTransformation
-        )
+        degen_icon = QPixmap(
+            get_resource_path(os.path.join("assets", "degen_icon.png"))
+        ).scaled(32, 32, Qt.IgnoreAspectRatio, Qt.SmoothTransformation)
         degen_label = QLabel()
         degen_label.setProperty("class", "DegenLabel")
         degen_label.setFixedWidth(45)
